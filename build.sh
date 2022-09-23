@@ -21,6 +21,10 @@ chroot "${CHROOT_DIR}" apt-get -qq update
 chroot "${CHROOT_DIR}" env DEBIAN_FRONTEND=noninteractive apt-get -qqy dist-upgrade
 chroot "${CHROOT_DIR}" env DEBIAN_FRONTEND=noninteractive apt-get -qqy install --no-install-recommends ${PACKAGES}
 
+git clone https://github.com/lukas2511/dotfiles.git "${CHROOT_DIR}/root/.dotfiles"
+ln -s .dotfiles/zshrc "${CHROOT_DIR}/root/.zshrc"
+chroot "${CHROOT_DIR}" chsh -s /usr/bin/zsh root
+
 rm -rf "${CHROOT_DIR}/usr/share/man" "${CHROOT_DIR}/var/lib/apt" "${CHROOT_DIR}/var/cache/apt" "${CHROOT_DIR}/var/log"/*
 
 mkdir -p "${STAGING_DIR}"
