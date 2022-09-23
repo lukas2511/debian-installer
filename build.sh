@@ -20,6 +20,7 @@ cp -R files/rootfs/* "${CHROOT_DIR}/"
 chroot "${CHROOT_DIR}" apt-get -qq update
 chroot "${CHROOT_DIR}" env DEBIAN_FRONTEND=noninteractive apt-get -qqy dist-upgrade
 chroot "${CHROOT_DIR}" env DEBIAN_FRONTEND=noninteractive apt-get -qqy install --no-install-recommends ${PACKAGES}
+echo root:root | chroot "${CHROOT_DIR}" chpasswd
 
 git clone https://github.com/lukas2511/dotfiles.git "${CHROOT_DIR}/root/.dotfiles"
 ln -s .dotfiles/zshrc "${CHROOT_DIR}/root/.zshrc"
