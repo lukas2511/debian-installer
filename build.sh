@@ -33,10 +33,13 @@ rm -rf "${CHROOT_DIR}/usr/share/man"
 rm -rf "${CHROOT_DIR}/var/lib/apt" "${CHROOT_DIR}/var/cache/apt"
 rm -rf "${CHROOT_DIR}/usr/lib/firmware"/{netronome,amdgpu,ath11k,brcm,ath10k,i915,radeon,mediatek,mrvl,cypress,ti-connectivity,liquidio,nvidia,iwlwifi*,dvb*,v4l*}
 rm -rf "${CHROOT_DIR}/var/log"/*
+rm -rf "${CHROOT_DIR}/dev"/*
+rm -rf "${CHROOT_DIR}/proc"/*
+rm -rf "${CHROOT_DIR}/sys"/*
 
 mkdir -p "${STAGING_DIR}"
 cp -R files/staging/* "${STAGING_DIR}/"
-mksquashfs "${CHROOT_DIR}" "${STAGING_DIR}/live/filesystem.squashfs"
+mksquashfs "${CHROOT_DIR}" "${STAGING_DIR}/live/filesystem.squashfs" -comp xz
 cp ${CHROOT_DIR}/boot/vmlinuz-* "${STAGING_DIR}/live/vmlinuz"
 cp ${CHROOT_DIR}/boot/initrd.img-* "${STAGING_DIR}/live/initrd"
 
