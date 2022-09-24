@@ -8,5 +8,7 @@ build:
   artifacts:
     paths:
       - debian-custom.iso
+    expire_in: 2h
+    expose_as: 'Live ISO'
   script:
     - ./build.sh
