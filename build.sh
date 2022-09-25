@@ -8,11 +8,12 @@ PACKAGES="pve-kernel-5.19 systemd-sysv live-boot xz-utils"
 PACKAGES="${PACKAGES} locales localepurge"
 PACKAGES="${PACKAGES} vim git htop tmux zsh curl wget"
 PACKAGES="${PACKAGES} iproute2 net-tools ethtool tcpdump iputils-ping"
-PACKAGES="${PACKAGES} cryptsetup zfsutils"
+PACKAGES="${PACKAGES} cryptsetup zfsutils mdadm lvm2"
 PACKAGES="${PACKAGES} gdisk parted"
 PACKAGES="${PACKAGES} dosfstools e2fsprogs"
 PACKAGES="${PACKAGES} network-manager openssh-server"
 PACKAGES="${PACKAGES} ipmitool"
+PACKAGES="${PACKAGES} python3-netifaces python3-dialog"
 
 debootstrap --arch=amd64 --variant=minbase bullseye "${CHROOT_DIR}" http://ftp.de.debian.org/debian/
 cp -R files/rootfs/* "${CHROOT_DIR}/"
