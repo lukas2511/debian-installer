@@ -437,7 +437,7 @@ def prepare_disks():
             encrypted_disks = []
             for disk in root_disks:
                 luks_encrypt(disk, CONFIG["filesystem_encpasswd"], os.path.basename(disk))
-                encrypted_disks.append(os.path.basename(disk))
+                encrypted_disks.append("/dev/mapper/" + os.path.basename(disk))
             root_disks = encrypted_disks
         zpool_command = ["zpool", "create", "-R", "/mnt", "-O", "mountpoint=none"] + ashift
         if CONFIG["filesystem_encpasswd"] and CONFIG["filesystem_enczfsnative"]:
@@ -699,7 +699,7 @@ def install_debian():
         if CONFIG["filesystem_type"] == "zfs":
             if not CONFIG["filesystem_enczfsnative"]:
                 for disk in CONFIG["filesystem_devices"]:
-                    path = "/dev/disk/by-id/" + disk
+                    path = "/dev/disk/by-id/" + disk + "-part4"
                     uuid = subprocess.check_output(["blkid", path, "-o", "value", "-s", "UUID"]).decode().strip()
                     crypttab += f"{disk} UUID={uuid} none luks,initramfs,discard\n"
         else:
