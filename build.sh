@@ -50,6 +50,8 @@ rm -rf "${CHROOT_DIR}/sys"/*
 
 mkdir -p "${STAGING_DIR}"
 cp -R files/staging/* "${STAGING_DIR}/"
+cp install.py "${CHROOT_DIR}/root/install.py"
+chmod a+x "${CHROOT_DIR}/root/install.py"
 mksquashfs "${CHROOT_DIR}" "${STAGING_DIR}/live/filesystem.squashfs" -comp xz
 cp ${CHROOT_DIR}/boot/vmlinuz-* "${STAGING_DIR}/live/vmlinuz"
 cp ${CHROOT_DIR}/boot/initrd.img-* "${STAGING_DIR}/live/initrd"
