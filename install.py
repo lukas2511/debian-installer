@@ -686,7 +686,7 @@ def install_debian():
         if CONFIG["network_ip4"]:
             interfaces += f"iface {mgmt_if} inet static\n"
             interfaces += f"    address {CONFIG['network_ip4']}\n"
-            interfaces += f"    address {CONFIG['network_gw4']}\n"
+            interfaces += f"    gateway {CONFIG['network_gw4']}\n"
         else:
             interfaces += f"iface {mgmt_if} inet dhcp\n"
 
