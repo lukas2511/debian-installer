@@ -18,7 +18,7 @@ PACKAGES="${PACKAGES} dosfstools e2fsprogs"
 PACKAGES="${PACKAGES} network-manager openssh-server"
 PACKAGES="${PACKAGES} ipmitool"
 PACKAGES="${PACKAGES} python3-netifaces python3-dialog"
-PACKAGES="${PACKAGES} grub2 rsync"
+PACKAGES="${PACKAGES} grub-efi rsync"
 PACKAGES="${PACKAGES} ca-certificates"
 
 debootstrap --arch=amd64 --variant=minbase bullseye "${CHROOT_DIR}" http://ftp.de.debian.org/debian/
