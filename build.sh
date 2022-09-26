@@ -30,6 +30,8 @@ git clone https://github.com/lukas2511/dotfiles.git "${CHROOT_DIR}/root/.dotfile
 ln -s .dotfiles/zshrc "${CHROOT_DIR}/root/.zshrc"
 chroot "${CHROOT_DIR}" chsh -s /usr/bin/zsh root
 
+echo "AUTO -all" >> "${CHROOT_DIR}/etc/mdadm/mdadm.conf"
+
 rm -rf "${CHROOT_DIR}/usr/share/man"
 rm -rf "${CHROOT_DIR}/var/lib/apt" "${CHROOT_DIR}/var/cache/apt"
 rm -rf "${CHROOT_DIR}/usr/lib/firmware"/{netronome,amdgpu,ath11k,brcm,ath10k,i915,radeon,mediatek,mrvl,cypress,ti-connectivity,liquidio,nvidia,iwlwifi*,dvb*,v4l*}
