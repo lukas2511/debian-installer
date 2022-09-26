@@ -478,6 +478,7 @@ def prepare_disks():
 
 def install_debian():
     # rsync live os to disk
+    print("# Installing OS")
     exclude_dirs = ["/dev", "/proc", "/run", "/sys", "/tmp", "/mnt", "/root", "/home"]
     exclude_files = ["/etc/machine-id", "/etc/systemd/system/getty@tty1.service.d"]
     for alg in ["ecdsa", "ed25519", "rsa", "dsa"]:
@@ -494,16 +495,19 @@ def install_debian():
             os.mkdir("/mnt" + path)
 
     # mount system directories to chroot
+    print("# Mounting system directories")
     if not os.path.exists("/mnt/dev/disk"):
         for path in ["/dev", "/dev/pts", "/proc", "/sys"]:
             subprocess.call(["mount", "--bind", path, "/mnt" + path])
 
     # /etc/machine-id
+    print("# Generating machine-id")
     if not os.path.exists("/mnt/etc/machine-id"):
         machine_id = subprocess.check_output(["dbus-uuidgen"]).decode()
         open("/mnt/etc/machine-id", "w").write(machine_id)
 
     # purge unnecessary packages
+    print("# Removing unnecessary packages")
     unneeded_packages = ["live-boot", "network-manager"]
     if CONFIG["purge_unnecessary"]:
         unneeded_packages += ["debootstrap", "python3-netifaces", "python3-dialog"]
@@ -519,27 +523,34 @@ def install_debian():
     subprocess.call(["chroot", "/mnt", "env", "DEBIAN_FRONTEND=noninteractive", "apt-get", "-qqy", "autoremove", "--purge"])
 
     # /etc/ssh/ssh_host_*_key{,.pub}
+    print("# Generating ssh host keys")
     subprocess.call(["chroot", "/mnt", "ssh-keygen", "-A"])
 
     # set root password
+    print("# Setting root password")
     proc = subprocess.Popen(["chroot", "/mnt", "chpasswd"], stdin=subprocess.PIPE)
     proc.communicate(input=("root:%s\n" % CONFIG["root_password"]).encode())
 
     # set root shell
+    print("# Setting root shell")
     subprocess.call(["chroot", "/mnt", "chsh", "-s", "/usr/bin/zsh", "root"])
 
     # /root/.dotfiles
+    print("# Adding dotfiles")
     subprocess.call(["cp", "-Ra", "/root/.dotfiles", "/mnt/root"])
     # /root/.zshrc
+    print("# Setting zshrc symlink")
     subprocess.call(["ln", "-sf", ".dotfiles/zshrc", "/mnt/root/.zshrc"])
     # /root/.ssh/authorized
     if CONFIG["root_pubkey"]:
+        print("# Adding authorized keys for root")
         if not os.path.exists("/mnt/root/.ssh"):
             os.mkdir("/mnt/root/.ssh")
         open("/mnt/root/.ssh/authorized_keys", "w").write(CONFIG["root_pubkey"])
 
     # unprivileged user
     if CONFIG["user_name"]:
+        print("# Setting up unprivileged user")
         # create user and home
         if not os.path.exists("/mnt/home/%s" % CONFIG["user_name"]):
             subprocess.call(["chroot", "/mnt", "useradd", "-m", CONFIG["user_name"]])
@@ -562,29 +573,37 @@ def install_debian():
         subprocess.call(["chown", "-R", "1000:1000", home])
 
     # /etc/locale.gen
+    print("# Generating locale")
     locales = "en_US.UTF-8 UTF-8\n"
     if open("/mnt/etc/locale.gen").read() != locales:
         open("/mnt/etc/locale.gen", "w").write(locales)
         subprocess.call(["chroot", "/mnt", "locale-gen"])
 
     # /etc/locale.conf
+    print("# Configuring locale")
     open("/mnt/etc/locale.conf", "w").write("LANG=en_US.UTF-8\n")
 
     # /etc/vconsole.conf
+    print("# Configuring keymap")
     open("/mnt/etc/vconsole.conf", "w").write("KEYMAP=us\n")
 
     # /etc/localtime
+    print("# Configuring timezone")
     subprocess.call(["ln", "-sf", "/usr/share/zoneinfo/Europe/Berlin", "/mnt/etc/localtime"])
 
     # /etc/resolv.conf
+    print("# Generating resolv.conf")
     if os.path.exists("/mnt/etc/resolv.conf"):
         os.unlink("/mnt/etc/resolv.conf")
     open("/mnt/etc/resolv.conf", "w").write("\n".join(["nameserver %s" % x for x in CONFIG["network_dns"]]) + "\n")
 
     # /etc/hostname
+    print("# Setting hostname")
     open("/mnt/etc/hostname", "w").write(CONFIG["fqdn"].split(".")[0])
+    # TODO: mailname etc?
 
     # /etc/hosts
+    print("# Generating hosts file")
     hosts = "127.0.1.1 %s %s\n" % (CONFIG["fqdn"], CONFIG["fqdn"].split(".")[0])
     hosts += "127.0.0.1 localhost\n"
     hosts += "::1 localhost ip6-localhost ip6-loopback\n"
@@ -593,6 +612,7 @@ def install_debian():
     open("/mnt/etc/hosts", "w").write(hosts)
 
     # /etc/network/interfaces
+    print("# Generating network configuration")
     interfaces = ""
     bridge_port = None
     for iface in CONFIG["network_interfaces"]:
@@ -666,6 +686,7 @@ def install_debian():
     open("/mnt/etc/network/interfaces", "w").write(interfaces)
 
     # /etc/crypttab
+    print("# Generating crypttab")
     crypttab = "# <name> <device> <password> <options>\n"
     if CONFIG["filesystem_encpasswd"]:
         if CONFIG["filesystem_type"] == "zfs":
@@ -678,13 +699,14 @@ def install_debian():
             if len(CONFIG["filesystem_devices"]) > 1:
                 path = "/dev/md1"
             else:
-                path = "/dev/disk/by-id/" + CONFIG["filesystem_devices"][0]
+                path = "/dev/disk/by-id/" + CONFIG["filesystem_devices"][0] + "-part4"
             uuid = subprocess.check_output(["blkid", path, "-o", "value", "-s", "UUID"]).decode().strip()
             crypttab += f"root-crypt UUID={uuid} none luks,initramfs,discard\n"
 
     open("/mnt/etc/crypttab", "w").write(crypttab)
 
     # /etc/fstab
+    print("# Generating fstab")
     fstab = "tmpfs /tmp tmpfs nosuid,nodev 0 0\n"
     if len(CONFIG["filesystem_devices"]) > 1:
         boot_uuid = subprocess.check_output(["blkid", "/dev/md0", "-o", "value", "-s", "UUID"]).decode().strip()
@@ -707,6 +729,7 @@ def install_debian():
     open("/mnt/etc/fstab", "w").write(fstab)
 
     # /etc/mdadm/mdadm.conf
+    print("# Generating mdadm config")
     mdadm = "HOMEHOST <system>\nMAILADDR root\n"
     if len(CONFIG["filesystem_devices"]) > 1:
         boot_raid_uuid = subprocess.check_output(["blkid", "/dev/disk/by-id/" + CONFIG["filesystem_devices"][0] + "-part3", "-o", "value", "-s", "UUID"]).decode().strip()
@@ -717,10 +740,12 @@ def install_debian():
     open("/mnt/etc/mdadm/mdadm.conf", "w").write(mdadm)
 
     # update initramfs
+    print("# Updating initramfs")
     kernel_version = os.path.basename(glob.glob("/mnt/lib/modules/*")[0])
     subprocess.call(["chroot", "/mnt", "update-initramfs", "-u", "-k", kernel_version])
 
     # configure and install grub
+    print("# Configuring and installing grub")
     if not os.path.exists("/mnt/boot/efi"):
         os.mkdir("/mnt/boot/efi")
     subprocess.call(["chroot", "/mnt", "update-grub"])
@@ -731,9 +756,11 @@ def install_debian():
         subprocess.call(["umount", "/mnt/boot/efi"])
 
     # update motd and issue
+    print("# Updating motd + issue")
     open("/mnt/etc/motd", "w").write("")
     open("/mnt/etc/issue", "w").write(open("/etc/issue").read().splitlines()[0] + "\n\n")
 
+    print("# Done!")
     # TODO: grub + efi update after kernel updates
     # TODO: network in initramfs
 
