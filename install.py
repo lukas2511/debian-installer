@@ -142,6 +142,7 @@ def list_netifaces():
     ifaces = {}
     for path in sorted(glob.glob("/sys/class/net/*")):
         iface = os.path.basename(path)
+        if iface == "bonding_masters": continue
 
         realpath = os.readlink(path)
         if '/virtual/' in realpath: continue
@@ -307,7 +308,8 @@ def luks_encrypt(partition, passphrase, name):
 
 
 def main():
-    #cleanup_devices()
+    if not os.path.exists("/mnt/etc/os-release"):
+        cleanup_devices()
 
     # stuff
     CONFIG["skip_configured"] = True
@@ -328,7 +330,8 @@ def main():
             time.sleep(1)
         print("")
 
-    #prepare_disks()
+    if not os.path.exists("/mnt/etc/os-release"):
+        prepare_disks()
     install_debian()
 
 def cleanup_devices():
@@ -465,31 +468,35 @@ def prepare_disks():
     os.mkdir("/mnt/boot/efi")
 
 def install_debian():
-    if not os.path.exists("/mnt/etc/os-release"):
-        subprocess.call(["debootstrap", "--arch=amd64", "bullseye", "/mnt", "http://ftp.de.debian.org/debian/"])
+    exclude_dirs = ["/dev", "/proc", "/run", "/sys", "/tmp", "/mnt"]
+    exclude_files = ["/etc/machine-id"]
+    for alg in ["ecdsa", "ed25519", "rsa"]:
+        exclude_files += [f"/etc/ssh/ssh_host_{alg}_key"]
+        exclude_files += [f"/etc/ssh/ssh_host_{alg}_key.pub"]
+    exclude_files += glob.glob("/boot/initrd*")
+    rsync = ["rsync", "--archive", "--numeric-ids", "--links", "--delete"]
+    for path in exclude_dirs + exclude_files:
+        rsync += ["--exclude", path]
+    rsync += ["/", "/mnt/"]
+    subprocess.call(rsync)
+    for path in exclude_dirs:
+        if not os.path.exists("/mnt" + path):
+            os.mkdir("/mnt" + path)
+
+    if not os.path.exists("/mnt/dev/disk"):
         for path in ["/dev", "/dev/pts", "/proc", "/sys"]:
             subprocess.call(["mount", "--bind", path, "/mnt" + path])
 
-    shutil.copy("/etc/apt/sources.list", "/mnt/etc/apt/sources.list")
-    subprocess.call(["chroot", "/mnt", "apt-get", "-qq", "update"])
+    unneeded_packages = ["live-boot", "network-manager", "debootstrap", "python3-netifaces", "python3-dialog"]
+    if CONFIG["filesystem_type"] != "zfs":
+        unneeded_packages += ["zfs-dkms", "zfs-initramfs", "zfsutils-linux"]
+    if not CONFIG["filesystem_encpasswd"] or CONFIG["filesystem_enczfsnative"]:
+        unneeded_packages += ["cryptsetup"]
+    if 'lvm' not in CONFIG["filesystem_type"]:
+        unneeded_packages += ["lvm2"]
 
-    packages = ["linux-image-amd64", "grub2", "locales", "ifupdown2", "openssh-server"]
-    packages += ["zsh", "vim", "git", "htop", "tmux", "curl"]
-
-    if CONFIG["filesystem_type"] == "zfs": packages += ["linux-headers-amd64", "zfs-initramfs", "zfsutils", "zfs-dkms"]
-    if len(CONFIG["filesystem_devices"]) > 1: packages += ["mdadm"]
-    if "lvm" in CONFIG["filesystem_type"]: packages += ["lvm2"]
-    if CONFIG["filesystem_encpasswd"] and not CONFIG["filesystem_enczfsnative"]: packages += ["cryptsetup"]
-    if CONFIG["network_bridge"]: packages += ["bridge-utils"]
-    if CONFIG["network_bond_type"]: packages += ["ifenslave"]
-
-    subprocess.call(["chroot", "/mnt", "env", "DEBIAN_FRONTEND=noninteractive", "apt-get", "-qqy", "install"] + packages)
-
-    if "zfs-dkms" in packages:
-        zfs = os.path.basename(glob.glob("/mnt/usr/src/zfs-*")[0])
-        linux = os.path.basename(glob.glob("/mnt/lib/modules/*-amd64")[0])
-        if not os.path.exists(f"/mnt/lib/modules/{linux}/updates/dkms/zfs.ko"):
-            subprocess.call(["chroot", "/mnt", "dkms", "install", "zfs/" + zfs[4:], "-k", linux])
+    subprocess.call(["chroot", "/mnt", "env", "DEBIAN_FRONTEND=noninteractive", "apt-get", "-qqy", "purge"] + unneeded_packages)
+    subprocess.call(["chroot", "/mnt", "env", "DEBIAN_FRONTEND=noninteractive", "apt-get", "-qqy", "autoremove", "--purge"])
 
     proc = subprocess.Popen(["chroot", "/mnt", "chpasswd"], stdin=subprocess.PIPE)
     proc.communicate(input=("root:%s\n" % CONFIG["root_password"]).encode())
@@ -607,7 +614,6 @@ def install_debian():
     open("/mnt/etc/network/interfaces", "w").write(interfaces)
 
     # TODO: grub + efi foo
-    # TODO: offline install?
 
 if __name__ == '__main__':
     main()
