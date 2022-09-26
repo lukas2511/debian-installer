@@ -710,9 +710,13 @@ def install_debian():
     fstab = "tmpfs /tmp tmpfs nosuid,nodev 0 0\n"
     if len(CONFIG["filesystem_devices"]) > 1:
         boot_uuid = subprocess.check_output(["blkid", "/dev/md0", "-o", "value", "-s", "UUID"]).decode().strip()
+        fstab += f"UUID={boot_uuid} /boot ext4 defaults,errors=remount-ro 0 0\n"
     else:
         boot_uuid = subprocess.check_output(["blkid", "/dev/disk/by-id/" + CONFIG["filesystem_devices"][0] + "-part3", "-o", "value", "-s", "UUID"]).decode().strip()
-    fstab += f"UUID={boot_uuid} /boot ext4 defaults,errors=remount-ro 0 0\n"
+        fstab += f"UUID={boot_uuid} /boot ext4 defaults,errors=remount-ro 0 0\n"
+
+        efi_uuid = subprocess.check_output(["blkid", "/dev/disk/by-id/" + CONFIG["filesystem_devices"][0] + "-part2", "-o", "value", "-s", "UUID"]).decode().strip()
+        fstab += f"UUID={efi_uuid} /boot/efi vfat defaults,errors=remount-ro 0 0\n"
     if "lvm" in CONFIG["filesystem_type"]:
         fs = CONFIG["filesystem_type"][:-3]
         fstab += f"/dev/vg0/root / {fs} defaults,errors=remount-ro 0 0\n"
