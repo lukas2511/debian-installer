@@ -42,7 +42,6 @@ chroot "${CHROOT_DIR}" chsh -s /usr/bin/zsh root
 
 echo "AUTO -all" >> "${CHROOT_DIR}/etc/mdadm/mdadm.conf"
 
-rm -rf "${CHROOT_DIR}/usr/share/man"
 rm -rf "${CHROOT_DIR}/var/lib/apt/lists" "${CHROOT_DIR}/var/cache/apt/"*
 rm -rf "${CHROOT_DIR}/dev"/*
 rm -rf "${CHROOT_DIR}/proc"/*
