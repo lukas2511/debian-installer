@@ -5,7 +5,7 @@ CHROOT_DIR="${BUILD_DIR}/chroot"
 STAGING_DIR="${BUILD_DIR}/staging"
 
 PACKAGES="linux-image-amd64 linux-headers-amd64"
-PACKAGES="${PACKAGES} systemd-sysv live-boot xz-utils"
+PACKAGES="${PACKAGES} dbus systemd-sysv live-boot xz-utils"
 PACKAGES="${PACKAGES} locales console-setup"
 PACKAGES="${PACKAGES} vim git htop tmux zsh curl wget"
 PACKAGES="${PACKAGES} ifupdown2 bridge-utils ifenslave isc-dhcp-client"
