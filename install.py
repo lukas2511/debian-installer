@@ -623,7 +623,7 @@ def install_debian():
     interfaces = ""
     bridge_port = None
     for iface in CONFIG["network_interfaces"]:
-        interfaces += f"allow-hotplug {iface}\n"
+        interfaces += f"auto {iface}\n"
     interfaces += "\n"
 
     bond_options = []
@@ -670,7 +670,7 @@ def install_debian():
             interfaces += f"    gateway {CONFIG['network_gw6']}\n"
             interfaces += f"    up sysctl -w net.ipv6.conf.{mgmt_if.replace('.','/')}.accept_ra=0\n"
     else:
-        interfaces += f"iface {mgmt_if} inet6 auto\n"
+        interfaces += f"iface {mgmt_if} inet6\n"
     if vlan_raw_device:
         interfaces += f"    vlan-raw-device {vlan_raw_device}\n"
     elif bridge_port:
