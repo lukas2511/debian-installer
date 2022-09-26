@@ -195,7 +195,7 @@ def get_config():
 
     # Filesystem info
     overview += "\n# Filesystem information\n"
-    filesystem_types = {"zfs": "ZFS", "ext4": "ext4", "ext4lvm": "ext4 on LVM"}
+    filesystem_types = {"zfs": "ZFS", "ext4": "ext4", "ext4lvm": "ext4 on LVM", "xfs": "XFS", "xfslvm": "XFS on LVM"}
     get_choice("filesystem_type", "Filesystem", "Select filesystem type", filesystem_types, "zfs")
     overview += "Type: %s\n" % filesystem_types[CONFIG["filesystem_type"]]
     get_multichoice("filesystem_devices", "Select devices", "Select devices to install to.\nSelecting multiple devices allows for various raid configurations.", list_blockdevices())
@@ -763,6 +763,9 @@ def install_debian():
     print("# Done!")
     # TODO: grub + efi update after kernel updates
     # TODO: network in initramfs
+
+    if "shutdown" in CONFIG and CONFIG["shutdown"]:
+        subprocess.call(["shutdown", "-h", "now"])
 
 if __name__ == '__main__':
     main()

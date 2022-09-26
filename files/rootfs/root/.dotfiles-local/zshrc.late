@@ -1,4 +1,4 @@
-if [ "${TTY:-}" = "/dev/tty1" ] && [ -e "/dev/disk/by-label/INSTALL_CONFIG" ]; then
+if [ "${TTY:-}" = "/dev/tty1" ] && [ -e "/dev/disk/by-label/INSTALL_CFG" ]; then
 	mkdir /tmp/preseed
 	mount /dev/disk/by-label/INSTALL_CONFIG /tmp/preseed
 	cp /tmp/preseed/config.json /tmp/config.json
