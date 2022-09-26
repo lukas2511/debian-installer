@@ -91,7 +91,8 @@ for i, config in enumerate(CONFIGS):
     os.chmod("tests/%s/boot.sh" % name, 0o0755)
 
     script += "  -drive file=config.img,index=%d,media=disk,format=raw \\\n" % (i+1)
-    script += "  -drive file=../../debian-custom.iso,index=%d,media=cdrom,format=raw" % (i+2)
+    script += "  -drive file=../../debian-custom.iso,index=%d,media=cdrom,format=raw \\\n" % (i+2)
+    script += "  -nographic -serial none -monitor none"
 
     open("tests/%s/install.sh" % name, "w").write(script)
     os.chmod("tests/%s/install.sh" % name, 0o0755)
