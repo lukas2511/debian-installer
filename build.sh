@@ -26,7 +26,6 @@ chroot "${CHROOT_DIR}" apt-get -qq update
 chroot "${CHROOT_DIR}" env DEBIAN_FRONTEND=noninteractive apt-get -qqy dist-upgrade
 chroot "${CHROOT_DIR}" env DEBIAN_FRONTEND=noninteractive apt-get -qqy install --no-install-recommends ${PACKAGES}
 chroot "${CHROOT_DIR}" dkms install "$(basename ${CHROOT_DIR}/usr/src/zfs-* | tr '-' '/')" -k "$(basename ${CHROOT_DIR}/lib/modules/*)"
-apt-get -qqy install --no-install-recommends ${PACKAGES}
 
 echo en_US.UTF-8 UTF-8 > "${CHROOT_DIR}/etc/locale.gen"
 chroot "${CHROOT_DIR}" locale-gen
