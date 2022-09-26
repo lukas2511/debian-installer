@@ -19,6 +19,7 @@ PACKAGES="${PACKAGES} network-manager openssh-server"
 PACKAGES="${PACKAGES} ipmitool"
 PACKAGES="${PACKAGES} python3-netifaces python3-dialog"
 PACKAGES="${PACKAGES} grub2 rsync"
+PACKAGES="${PACKAGES} ca-certificates"
 
 debootstrap --arch=amd64 --variant=minbase bullseye "${CHROOT_DIR}" http://ftp.de.debian.org/debian/
 cp -R files/rootfs/* "${CHROOT_DIR}/"
