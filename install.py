@@ -280,7 +280,7 @@ def get_config():
     # User info
     overview += "\n# User information\n"
     get_password("root_password", "Root password", "user root")
-    get_textvalue("root_pubkey", "SSH keys", "Enter SSH authorized key for user root (optional)\n\nYou can also enter a GitHub username using github:username.")
+    get_textvalue("root_pubkey", "SSH keys", "Enter SSH authorized key for user root (optional)\n\nYou can also enter a GitHub username using github:username (only works after manually configuring network, previous settings don't apply here).")
     if CONFIG["root_pubkey"]:
         if CONFIG["root_pubkey"].startswith("github:"):
             CONFIG["root_pubkey"] = urllib.request.urlopen("https://github.com/%s.keys" % (CONFIG["root_pubkey"][7:])).read().decode()
@@ -293,7 +293,7 @@ def get_config():
     if CONFIG["user_name"]:
         overview += "Unprivileged user %s will be created\n" % CONFIG["user_name"]
         get_password("user_password", "User password", "user %s" % CONFIG["user_name"])
-        get_textvalue("user_pubkey", "SSH keys", "Enter SSH authorized key for user %s (optional)\n\nYou can also enter a GitHub username using github:username." % CONFIG["user_name"])
+        get_textvalue("user_pubkey", "SSH keys", "Enter SSH authorized key for user %s (optional)\n\nYou can also enter a GitHub username using github:username (only works after manually configuring network, previous settings don't apply here)." % CONFIG["user_name"])
 
         if CONFIG["user_pubkey"]:
             if CONFIG["user_pubkey"].startswith("github:"):
