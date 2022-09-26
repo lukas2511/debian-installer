@@ -2,6 +2,9 @@ if [ "${TTY:-}" = "/dev/tty1" ]; then
 	if [ -e "/dev/disk/by-label/INSTALL_CFG" ]; then
 		mkdir /tmp/preseed
 		mount /dev/disk/by-label/INSTALL_CFG /tmp/preseed
+		if [ -e /tmp/preseed/prepare.sh ]; then
+			bash /tmp/preseed/prepare.sh
+		fi
 		if [ -e /tmp/preseed/config.json ]; then
 			cp /tmp/preseed/config.json /tmp/config.json
 		fi
