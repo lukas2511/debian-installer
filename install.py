@@ -755,6 +755,17 @@ def install_debian():
     kernel_version = os.path.basename(glob.glob("/mnt/lib/modules/*")[0])
     subprocess.call(["chroot", "/mnt", "update-initramfs", "-u", "-k", kernel_version])
 
+    # /etc/default/grub
+    grubdefault = "GRUB_DEFAULT=0\n"
+    grubdefault += "GRUB_TIMEOUT=5\n"
+    grubdefault += "GRUB_DISTRIBUTOR=`lsb_release -i -s 2> /dev/null || echo Debian`\n"
+    grubdefault += "GRUB_CMDLINE_LINUX_DEFAULT=\"quiet\"\n"
+    if CONFIG["filesystem_type"] == "zfs":
+        grubdefault += "GRUB_CMDLINE_LINUX=\"root=ZFS=zroot/ROOT/debian boot=zfs audit=0\"\n"
+    else:
+        grubdefault += "GRUB_CMDLINE_LINUX=\"audit=0\"\n"
+    open("/mnt/etc/default/grub", "w").write(grubdefault)
+
     # configure and install grub
     print("# Configuring and installing grub")
     if not os.path.exists("/mnt/boot/efi"):
