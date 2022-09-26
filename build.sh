@@ -6,7 +6,7 @@ STAGING_DIR="${BUILD_DIR}/staging"
 
 PACKAGES="linux-image-amd64 linux-headers-amd64"
 PACKAGES="${PACKAGES} systemd-sysv live-boot xz-utils"
-PACKAGES="${PACKAGES} locales"
+PACKAGES="${PACKAGES} locales console-setup"
 PACKAGES="${PACKAGES} vim git htop tmux zsh curl wget"
 PACKAGES="${PACKAGES} ifupdown2 bridge-utils ifenslave"
 PACKAGES="${PACKAGES} iproute2 net-tools ethtool tcpdump iputils-ping"
