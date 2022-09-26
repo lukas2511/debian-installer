@@ -723,19 +723,22 @@ def install_debian():
 
         efi_uuid = subprocess.check_output(["blkid", "/dev/disk/by-id/" + CONFIG["filesystem_devices"][0] + "-part2", "-o", "value", "-s", "UUID"]).decode().strip()
         fstab += f"UUID={efi_uuid} /boot/efi vfat defaults,errors=remount-ro 0 0\n"
+
+    fs = CONFIG["filesystem_type"]
+    fsoptions = "defaults"
+    if "ext4" in fs:
+        fsoptions += ",errors=remount-ro"
+
     if "lvm" in CONFIG["filesystem_type"]:
-        fs = CONFIG["filesystem_type"][:-3]
-        fstab += f"/dev/vg0/root / {fs} defaults,errors=remount-ro 0 0\n"
+        fstab += f"/dev/vg0/root / {fs[:-3]} {fsoptions} 0 0\n"
     elif CONFIG["filesystem_type"] in ["ext4", "xfs"]:
-        fs = CONFIG["filesystem_type"]
         if CONFIG["filesystem_encpasswd"]:
-            fstab += f"/dev/mapper/root-crypt / {fs} defaults,errors=remount-ro 0 0\n"
+            root_part = "/dev/mapper/root-crypt"
         elif len(CONFIG["filesystem_devices"]) > 1:
-            root_uuid = subprocess.check_output(["blkid", "/dev/md1", "-o", "value", "-s", "UUID"]).decode().strip()
-            fstab += f"UUID={root_uuid} / {fs} defaults,errors=remount-ro 0 0\n"
+            root_part = "UUID=" + subprocess.check_output(["blkid", "/dev/md1", "-o", "value", "-s", "UUID"]).decode().strip()
         else:
-            root_uuid = subprocess.check_output(["blkid", "/dev/disk/by-id/" + CONFIG["filesystem_devices"][0] + "-part4", "-o", "value", "-s", "UUID"]).decode().strip()
-            fstab += f"UUID={root_uuid} / {fs} defaults,errors=remount-ro 0 0\n"
+            root_part = "UUID=" + subprocess.check_output(["blkid", "/dev/disk/by-id/" + CONFIG["filesystem_devices"][0] + "-part4", "-o", "value", "-s", "UUID"]).decode().strip()
+        fstab += f"UUID={root_part} / {fs} {fsoptions} 0 0\n"
     open("/mnt/etc/fstab", "w").write(fstab)
 
     # /etc/mdadm/mdadm.conf
