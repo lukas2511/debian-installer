@@ -29,6 +29,9 @@ chroot "${CHROOT_DIR}" env DEBIAN_FRONTEND=noninteractive apt-get -qqy dist-upgr
 chroot "${CHROOT_DIR}" env DEBIAN_FRONTEND=noninteractive apt-get -qqy install --no-install-recommends ${PACKAGES}
 chroot "${CHROOT_DIR}" dkms install "$(basename ${CHROOT_DIR}/usr/src/zfs-* | tr '-' '/')" -k "$(basename ${CHROOT_DIR}/lib/modules/*)"
 
+mkdir "${CHROOT_DIR}/etc/systemd/system/getty@tty1.service.d"
+printf "[Service]\nExecStart=\nExecStart=-/sbin/agetty --autologin root --noclear %%I \$TERM\n" > "${CHROOT_DIR}/etc/systemd/system/getty@tty1.service.d/override.conf"
+
 echo en_US.UTF-8 UTF-8 > "${CHROOT_DIR}/etc/locale.gen"
 chroot "${CHROOT_DIR}" locale-gen
 echo root:root | chroot "${CHROOT_DIR}" chpasswd
