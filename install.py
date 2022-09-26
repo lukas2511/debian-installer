@@ -607,7 +607,6 @@ def install_debian():
     # /etc/hostname
     print("# Setting hostname")
     open("/mnt/etc/hostname", "w").write(CONFIG["fqdn"].split(".")[0])
-    # TODO: mailname etc?
 
     # /etc/hosts
     print("# Generating hosts file")
@@ -783,9 +782,10 @@ def install_debian():
     open("/mnt/etc/motd", "w").write("")
     open("/mnt/etc/issue", "w").write(open("/etc/issue").read().splitlines()[0] + "\n\n")
 
+    # TODO: grub + efi updates after kernel updates (support for multiple efi partitions)
+    # TODO: dropbear + network in initramfs (maybe..)
+
     print("# Done!")
-    # TODO: grub + efi update after kernel updates
-    # TODO: network in initramfs
 
     if "shutdown" in CONFIG and CONFIG["shutdown"]:
         subprocess.call(["shutdown", "-h", "now"])
