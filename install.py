@@ -489,7 +489,7 @@ def install_debian():
         zfs = os.path.basename(glob.glob("/mnt/usr/src/zfs-*")[0])
         linux = os.path.basename(glob.glob("/mnt/lib/modules/*-amd64")[0])
         if not os.path.exists(f"/mnt/lib/modules/{linux}/updates/dkms/zfs.ko"):
-            subprocess.call(["chroot", "/mnt", "dkms", "install", zfs, "-k", linux])
+            subprocess.call(["chroot", "/mnt", "dkms", "install", "zfs/" + zfs[4:], "-k", linux])
 
     proc = subprocess.Popen(["chroot", "/mnt", "chpasswd"], stdin=subprocess.PIPE)
     proc.communicate(input=("root:%s\n" % CONFIG["root_password"]).encode())
