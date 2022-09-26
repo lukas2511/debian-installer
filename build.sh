@@ -4,16 +4,20 @@ BUILD_DIR="/tmp/build"
 CHROOT_DIR="${BUILD_DIR}/chroot"
 STAGING_DIR="${BUILD_DIR}/staging"
 
-PACKAGES="pve-kernel-5.19 systemd-sysv live-boot xz-utils"
-PACKAGES="${PACKAGES} locales localepurge"
+PACKAGES="linux-image-amd64 linux-headers-amd64"
+PACKAGES="${PACKAGES} systemd-sysv live-boot xz-utils"
+PACKAGES="${PACKAGES} locales"
 PACKAGES="${PACKAGES} vim git htop tmux zsh curl wget"
+PACKAGES="${PACKAGES} ifupdown2 bridge-utils ifenslave"
 PACKAGES="${PACKAGES} iproute2 net-tools ethtool tcpdump iputils-ping"
-PACKAGES="${PACKAGES} cryptsetup zfsutils mdadm lvm2"
+PACKAGES="${PACKAGES} zfs-dkms zfs-initramfs zfsutils"
+PACKAGES="${PACKAGES} cryptsetup mdadm lvm2"
 PACKAGES="${PACKAGES} gdisk parted debootstrap"
 PACKAGES="${PACKAGES} dosfstools e2fsprogs"
 PACKAGES="${PACKAGES} network-manager openssh-server"
 PACKAGES="${PACKAGES} ipmitool"
 PACKAGES="${PACKAGES} python3-netifaces python3-dialog"
+PACKAGES="${PACKAGES} grub2 rsync"
 
 debootstrap --arch=amd64 --variant=minbase bullseye "${CHROOT_DIR}" http://ftp.de.debian.org/debian/
 cp -R files/rootfs/* "${CHROOT_DIR}/"
@@ -23,7 +27,6 @@ chroot "${CHROOT_DIR}" env DEBIAN_FRONTEND=noninteractive apt-get -qqy dist-upgr
 chroot "${CHROOT_DIR}" env DEBIAN_FRONTEND=noninteractive apt-get -qqy install --no-install-recommends ${PACKAGES}
 echo en_US.UTF-8 UTF-8 > "${CHROOT_DIR}/etc/locale.gen"
 chroot "${CHROOT_DIR}" locale-gen
-chroot "${CHROOT_DIR}" localepurge
 echo root:root | chroot "${CHROOT_DIR}" chpasswd
 
 git clone https://github.com/lukas2511/dotfiles.git "${CHROOT_DIR}/root/.dotfiles"
@@ -33,9 +36,7 @@ chroot "${CHROOT_DIR}" chsh -s /usr/bin/zsh root
 echo "AUTO -all" >> "${CHROOT_DIR}/etc/mdadm/mdadm.conf"
 
 rm -rf "${CHROOT_DIR}/usr/share/man"
-rm -rf "${CHROOT_DIR}/var/lib/apt" "${CHROOT_DIR}/var/cache/apt"
-rm -rf "${CHROOT_DIR}/usr/lib/firmware"/{netronome,amdgpu,ath11k,brcm,ath10k,i915,radeon,mediatek,mrvl,cypress,ti-connectivity,liquidio,nvidia,iwlwifi*,dvb*,v4l*}
-rm -rf "${CHROOT_DIR}/var/log"/*
+rm -rf "${CHROOT_DIR}/var/lib/apt/lists" "${CHROOT_DIR}/var/cache/apt/"*
 rm -rf "${CHROOT_DIR}/dev"/*
 rm -rf "${CHROOT_DIR}/proc"/*
 rm -rf "${CHROOT_DIR}/sys"/*
