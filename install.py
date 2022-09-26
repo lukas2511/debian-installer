@@ -487,12 +487,12 @@ def install_debian():
     # rsync live os to disk
     print("# Installing OS")
     exclude_dirs = ["/dev", "/proc", "/run", "/sys", "/tmp", "/mnt", "/root", "/home"]
-    exclude_files = ["/etc/machine-id", "/etc/systemd/system/getty@tty1.service.d"]
+    exclude_files = ["/etc/machine-id", "/etc/systemd/system/getty@tty1.service.d", "/lib/live"]
     for alg in ["ecdsa", "ed25519", "rsa", "dsa"]:
         exclude_files += [f"/etc/ssh/ssh_host_{alg}_key"]
         exclude_files += [f"/etc/ssh/ssh_host_{alg}_key.pub"]
     exclude_files += glob.glob("/boot/initrd*")
-    rsync = ["rsync", "--archive", "--numeric-ids", "--links", "--delete"]
+    rsync = ["rsync", "--archive", "--numeric-ids", "--links", "--delete", "--one-file-system"]
     for path in exclude_dirs + exclude_files:
         rsync += ["--exclude", path]
     rsync += ["/", "/mnt/"]
