@@ -84,14 +84,14 @@ for i, config in enumerate(CONFIGS):
         if os.path.exists("tests/%s/disk%d.img" % (name, i)):
             os.unlink("tests/%s/disk%d.img" % (name, i))
         subprocess.call(["qemu-img", "create", "-q", "-f", "raw", "tests/%s/disk%d.img" % (name, i), "30G"])
-        script += "  -hd%s disk%d.img \\\n" % (letters[i], i)
+        #script += "  -hd%s disk%d.img \\\n" % (letters[i], i)
+        script += "  -drive file=disk%d.img,index=%d,media=disk,format=raw \\\n" % (i, i)
 
     open("tests/%s/boot.sh" % name, "w").write(script[:-3] + "\n")
     os.chmod("tests/%s/boot.sh" % name, 0o0755)
 
-    script += "  -hd%s config.img \\\n" % letters[len(config["filesystem_devices"])]
-    script += "  -cdrom ../../debian-custom.iso \\\n"
-    script += "  -boot d\n"
+    script += "  -drive file=config.img,index=%d,media=disk,format=raw \\\n" % (i+1)
+    script += "  -drive file=../../debian-custom.iso,index=%d,media=cdrom,format=raw" % (i+2)
 
     open("tests/%s/install.sh" % name, "w").write(script)
     os.chmod("tests/%s/install.sh" % name, 0o0755)
