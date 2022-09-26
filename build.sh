@@ -21,7 +21,7 @@ PACKAGES="${PACKAGES} python3-netifaces python3-dialog"
 PACKAGES="${PACKAGES} grub-efi rsync"
 PACKAGES="${PACKAGES} ca-certificates"
 
-debootstrap --arch=amd64 --variant=minbase bullseye "${CHROOT_DIR}" http://ftp.de.debian.org/debian/
+debootstrap --arch=amd64 --variant=minbase bullseye "${CHROOT_DIR}" http://deb.debian.org/debian/
 cp -R files/rootfs/* "${CHROOT_DIR}/"
 
 chroot "${CHROOT_DIR}" apt-get -qq update
