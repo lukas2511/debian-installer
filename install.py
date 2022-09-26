@@ -402,7 +402,7 @@ def prepare_disks():
         subprocess.call(["mkfs.vfat", path + "-part2"])
 
     if len(CONFIG["filesystem_devices"]) == 1:
-        disk_path = "/dev/disk/by-id/" + CONFIGS["filesystem_devices"][0]
+        disk_path = "/dev/disk/by-id/" + CONFIG["filesystem_devices"][0]
 
         boot_part = disk_path + "-part3"
         subprocess.call(["mkfs.ext4", boot_part])
