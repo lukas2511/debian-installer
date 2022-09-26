@@ -140,6 +140,7 @@ def get_password(option, title, subject, default="", allow_empty=False, minlengt
 
 def list_netifaces():
     ifaces = {}
+    tmp_ifaces = []
     for path in sorted(glob.glob("/sys/class/net/*")):
         iface = os.path.basename(path)
         if iface == "bonding_masters": continue
@@ -150,6 +151,12 @@ def list_netifaces():
         if iface == "lo":
             continue
 
+        subprocess.call(["ip", "link", "set", "up", "dev", iface])
+        tmp_ifaces.append((iface, path))
+
+    time.sleep(5)
+
+    for (iface, path) in tmp_ifaces:
         hwaddr = open(path + "/address").read().strip()
         state = open(path + "/operstate").read().strip()
         if state == "up":
@@ -508,7 +515,7 @@ def install_debian():
 
     # purge unnecessary packages
     print("# Removing unnecessary packages")
-    unneeded_packages = ["live-boot", "network-manager"]
+    unneeded_packages = ["live-boot"]
     if CONFIG["purge_unnecessary"]:
         unneeded_packages += ["debootstrap", "python3-netifaces", "python3-dialog"]
         if CONFIG["filesystem_type"] != "zfs":
@@ -756,6 +763,7 @@ def install_debian():
     for disk in CONFIG["filesystem_devices"]:
         path = "/dev/disk/by-id/" + disk + "-part2"
         subprocess.call(["mount", path, "/mnt/boot/efi"])
+        subprocess.call(["chroot", "/mnt", "grub-install", "--target=i386-pc", "/dev/disk/by-id/" + disk])
         subprocess.call(["chroot", "/mnt", "grub-install", "--removable"])
         subprocess.call(["umount", "/mnt/boot/efi"])
 
