@@ -2,6 +2,10 @@ if [ "${TTY:-}" = "/dev/tty1" ] && [ -e "/dev/disk/by-label/INSTALL_CFG" ]; then
 	mkdir /tmp/preseed
 	mount /dev/disk/by-label/INSTALL_CFG /tmp/preseed
 	cp /tmp/preseed/config.json /tmp/config.json
+	if [ -e /tmp/preseed/install.py ]; then
+		cp /tmp/preseed/install.py /root/install.py
+		chmod a+x /root/install.py
+	fi
 	umount /tmp/preseed
 	rmdir /tmp/preseed
 	/root/install.py
