@@ -298,6 +298,8 @@ def get_config():
     else:
         overview += "No unprivileged user will be created\n"
 
+    get_yesno("purge_unnecessary", "Cleanup", "Purge unnecessary packages from installation?", False)
+
     return overview
 
 def luks_encrypt(partition, passphrase, name):
@@ -447,6 +449,13 @@ def prepare_disks():
 
         subprocess.call(["zfs", "create", "zroot/ROOT"])
         subprocess.call(["zfs", "create", "-o", "mountpoint=/", "zroot/ROOT/debian"])
+        subprocess.call(["zfs", "create", "-o", "mountpoint=/home", "zroot/home"])
+        subprocess.call(["zfs", "create", "-o", "mountpoint=/root", "zroot/home/root"])
+        subprocess.call(["zfs", "create", "zroot/var"])
+        subprocess.call(["zfs", "create", "-o", "mountpoint=/var/lib", "zroot/var/lib"])
+        subprocess.call(["zfs", "create", "-o", "mountpoint=/var/log", "zroot/var/log"])
+        subprocess.call(["zfs", "create", "-o", "mountpoint=/var/cache", "zroot/var/cache"])
+        subprocess.call(["zpool", "set", "bootfs=zroot/ROOT/debian", "zroot"])
     else:
         if CONFIG["filesystem_encpasswd"]:
             luks_encrypt(real_root_part, CONFIG["filesystem_encpasswd"], "root-crypt")
@@ -468,9 +477,10 @@ def prepare_disks():
     os.mkdir("/mnt/boot/efi")
 
 def install_debian():
-    exclude_dirs = ["/dev", "/proc", "/run", "/sys", "/tmp", "/mnt"]
-    exclude_files = ["/etc/machine-id"]
-    for alg in ["ecdsa", "ed25519", "rsa"]:
+    # rsync live os to disk
+    exclude_dirs = ["/dev", "/proc", "/run", "/sys", "/tmp", "/mnt", "/root", "/home"]
+    exclude_files = ["/etc/machine-id", "/etc/systemd/system/getty@tty1.service.d"]
+    for alg in ["ecdsa", "ed25519", "rsa", "dsa"]:
         exclude_files += [f"/etc/ssh/ssh_host_{alg}_key"]
         exclude_files += [f"/etc/ssh/ssh_host_{alg}_key.pub"]
     exclude_files += glob.glob("/boot/initrd*")
@@ -483,66 +493,108 @@ def install_debian():
         if not os.path.exists("/mnt" + path):
             os.mkdir("/mnt" + path)
 
+    # mount system directories to chroot
     if not os.path.exists("/mnt/dev/disk"):
         for path in ["/dev", "/dev/pts", "/proc", "/sys"]:
             subprocess.call(["mount", "--bind", path, "/mnt" + path])
 
-    unneeded_packages = ["live-boot", "network-manager", "debootstrap", "python3-netifaces", "python3-dialog"]
-    if CONFIG["filesystem_type"] != "zfs":
-        unneeded_packages += ["zfs-dkms", "zfs-initramfs", "zfsutils-linux"]
-    if not CONFIG["filesystem_encpasswd"] or CONFIG["filesystem_enczfsnative"]:
-        unneeded_packages += ["cryptsetup"]
-    if 'lvm' not in CONFIG["filesystem_type"]:
-        unneeded_packages += ["lvm2"]
+    # /etc/machine-id
+    if not os.path.exists("/mnt/etc/machine-id"):
+        machine_id = subprocess.check_output(["dbus-uuidgen"]).decode()
+        open("/mnt/etc/machine-id", "w").write(machine_id)
 
+    # purge unnecessary packages
+    unneeded_packages = ["live-boot", "network-manager"]
+    if CONFIG["purge_unnecessary"]:
+        unneeded_packages += ["debootstrap", "python3-netifaces", "python3-dialog"]
+        if CONFIG["filesystem_type"] != "zfs":
+            unneeded_packages += ["zfs-dkms", "zfs-initramfs", "zfsutils-linux"]
+        if not CONFIG["filesystem_encpasswd"]:
+            unneeded_packages += ["dropbear-initramfs"]
+        if not CONFIG["filesystem_encpasswd"] or CONFIG["filesystem_enczfsnative"]:
+            unneeded_packages += ["cryptsetup", "cryptsetup-initramfs"]
+        if 'lvm' not in CONFIG["filesystem_type"]:
+            unneeded_packages += ["lvm2"]
     subprocess.call(["chroot", "/mnt", "env", "DEBIAN_FRONTEND=noninteractive", "apt-get", "-qqy", "purge"] + unneeded_packages)
     subprocess.call(["chroot", "/mnt", "env", "DEBIAN_FRONTEND=noninteractive", "apt-get", "-qqy", "autoremove", "--purge"])
 
+    # /etc/ssh/ssh_host_*_key{,.pub}
+    subprocess.call(["chroot", "/mnt", "ssh-keygen", "-A"])
+
+    # set root password
     proc = subprocess.Popen(["chroot", "/mnt", "chpasswd"], stdin=subprocess.PIPE)
     proc.communicate(input=("root:%s\n" % CONFIG["root_password"]).encode())
 
-    subprocess.call(["cp", "-Ra", "/root/.dotfiles", "/mnt/root"])
-    subprocess.call(["ln", "-sf", ".dotfiles/zshrc", "/mnt/root/.zshrc"])
+    # set root shell
     subprocess.call(["chroot", "/mnt", "chsh", "-s", "/usr/bin/zsh", "root"])
-    if not os.path.exists("/mnt/root/.ssh"):
-        os.mkdir("/mnt/root/.ssh")
+
+    # /root/.dotfiles
+    subprocess.call(["cp", "-Ra", "/root/.dotfiles", "/mnt/root"])
+    # /root/.zshrc
+    subprocess.call(["ln", "-sf", ".dotfiles/zshrc", "/mnt/root/.zshrc"])
+    # /root/.ssh/authorized
     if CONFIG["root_pubkey"]:
+        if not os.path.exists("/mnt/root/.ssh"):
+            os.mkdir("/mnt/root/.ssh")
         open("/mnt/root/.ssh/authorized_keys", "w").write(CONFIG["root_pubkey"])
 
+    # unprivileged user
     if CONFIG["user_name"]:
+        # create user and home
         if not os.path.exists("/mnt/home/%s" % CONFIG["user_name"]):
             subprocess.call(["chroot", "/mnt", "useradd", "-m", CONFIG["user_name"]])
+        home = "/mnt/home/" + CONFIG["user_name"]
+        # set shell for user
+        subprocess.call(["chroot", "/mnt", "chsh", "-s", "/usr/bin/zsh", CONFIG["user_name"]])
+        # set password for user
         proc = subprocess.Popen(["chroot", "/mnt", "chpasswd"], stdin=subprocess.PIPE)
         proc.communicate(input=("%s:%s\n" % (CONFIG["user_name"], CONFIG["user_password"])).encode())
-        home = "/mnt/home/" + CONFIG["user_name"]
+        # /home/$user/.dotfiles
         subprocess.call(["cp", "-Ra", "/root/.dotfiles", home + "/"])
+        # /home/$user/.zshrc
         subprocess.call(["ln", "-sf", ".dotfiles/zshrc", home + "/.zshrc"])
-        subprocess.call(["chroot", "/mnt", "chsh", "-s", "/usr/bin/zsh", CONFIG["user_name"]])
-        if not os.path.exists(home + "/.ssh"):
-            os.mkdir(home + "/.ssh")
+        # /home/$user/.ssh/authorized_keys
         if CONFIG["user_pubkey"]:
+            if not os.path.exists(home + "/.ssh"):
+                os.mkdir(home + "/.ssh")
             open(home + "/.ssh/authorized_keys", "w").write(CONFIG["user_pubkey"])
+        # /home/$user permissions
         subprocess.call(["chown", "-R", "1000:1000", home])
 
+    # /etc/locale.gen
     locales = "en_US.UTF-8 UTF-8\n"
     if open("/mnt/etc/locale.gen").read() != locales:
         open("/mnt/etc/locale.gen", "w").write(locales)
         subprocess.call(["chroot", "/mnt", "locale-gen"])
+
+    # /etc/locale.conf
     open("/mnt/etc/locale.conf", "w").write("LANG=en_US.UTF-8\n")
+
+    # /etc/vconsole.conf
     open("/mnt/etc/vconsole.conf", "w").write("KEYMAP=us\n")
+
+    # /etc/localtime
     subprocess.call(["ln", "-sf", "/usr/share/zoneinfo/Europe/Berlin", "/mnt/etc/localtime"])
 
+    # /etc/resolv.conf
     if os.path.exists("/mnt/etc/resolv.conf"):
         os.unlink("/mnt/etc/resolv.conf")
     open("/mnt/etc/resolv.conf", "w").write("\n".join(["nameserver %s" % x for x in CONFIG["network_dns"]]) + "\n")
 
+    # /etc/hostname
     open("/mnt/etc/hostname", "w").write(CONFIG["fqdn"].split(".")[0])
-    open("/mnt/etc/hosts", "w").write("127.0.1.1 %s %s\n127.0.0.1 localhost\n::1 localhost ip6-localhost ip6-loopback\nff02::1 ip6-allnodes\nff02::2 ip6-allrouters\n" % (CONFIG["fqdn"], CONFIG["fqdn"].split(".")[0]))
 
+    # /etc/hosts
+    hosts = "127.0.1.1 %s %s\n" % (CONFIG["fqdn"], CONFIG["fqdn"].split(".")[0])
+    hosts += "127.0.0.1 localhost\n"
+    hosts += "::1 localhost ip6-localhost ip6-loopback\n"
+    hosts += "ff02::1 ip6-allnodes\n"
+    hosts += "ff02::2 ip6-allrouters\n"
+    open("/mnt/etc/hosts", "w").write(hosts)
+
+    # /etc/network/interfaces
     interfaces = ""
-
     bridge_port = None
-    
     for iface in CONFIG["network_interfaces"]:
         interfaces += f"allow-hotplug {iface}\n"
     interfaces += "\n"
@@ -613,7 +665,77 @@ def install_debian():
 
     open("/mnt/etc/network/interfaces", "w").write(interfaces)
 
-    # TODO: grub + efi foo
+    # /etc/crypttab
+    crypttab = "# <name> <device> <password> <options>\n"
+    if CONFIG["filesystem_encpasswd"]:
+        if CONFIG["filesystem_type"] == "zfs":
+            if not CONFIG["filesystem_enczfsnative"]:
+                for disk in CONFIG["filesystem_devices"]:
+                    path = "/dev/disk/by-id/" + disk
+                    uuid = subprocess.check_output(["blkid", path, "-o", "value", "-s", "UUID"]).decode().strip()
+                    crypttab += f"{disk} UUID={uuid} none luks,initramfs,discard\n"
+        else:
+            if len(CONFIG["filesystem_devices"]) > 1:
+                path = "/dev/md1"
+            else:
+                path = "/dev/disk/by-id/" + CONFIG["filesystem_devices"][0]
+            uuid = subprocess.check_output(["blkid", path, "-o", "value", "-s", "UUID"]).decode().strip()
+            crypttab += f"root-crypt UUID={uuid} none luks,initramfs,discard\n"
+
+    open("/mnt/etc/crypttab", "w").write(crypttab)
+
+    # /etc/fstab
+    fstab = "tmpfs /tmp tmpfs nosuid,nodev 0 0\n"
+    if len(CONFIG["filesystem_devices"]) > 1:
+        boot_uuid = subprocess.check_output(["blkid", "/dev/md0", "-o", "value", "-s", "UUID"]).decode().strip()
+    else:
+        boot_uuid = subprocess.check_output(["blkid", "/dev/disk/by-id/" + CONFIG["filesystem_devices"][0] + "-part3", "-o", "value", "-s", "UUID"]).decode().strip()
+    fstab += f"UUID={boot_uuid} /boot ext4 defaults,errors=remount-ro 0 0\n"
+    if "lvm" in CONFIG["filesystem_type"]:
+        fs = CONFIG["filesystem_type"][:-3]
+        fstab += f"/dev/vg0/root / {fs} defaults,errors=remount-ro 0 0\n"
+    elif CONFIG["filesystem_type"] in ["ext4", "xfs"]:
+        fs = CONFIG["filesystem_type"]
+        if CONFIG["filesystem_encpasswd"]:
+            fstab += f"/dev/mapper/root-crypt / {fs} defaults,errors=remount-ro 0 0\n"
+        elif len(CONFIG["filesystem_devices"]) > 1:
+            root_uuid = subprocess.check_output(["blkid", "/dev/md1", "-o", "value", "-s", "UUID"]).decode().strip()
+            fstab += f"UUID={root_uuid} / {fs} defaults,errors=remount-ro 0 0\n"
+        else:
+            root_uuid = subprocess.check_output(["blkid", "/dev/disk/by-id/" + CONFIG["filesystem_devices"][0] + "-part4", "-o", "value", "-s", "UUID"]).decode().strip()
+            fstab += f"UUID={root_uuid} / {fs} defaults,errors=remount-ro 0 0\n"
+    open("/mnt/etc/fstab", "w").write(fstab)
+
+    # /etc/mdadm/mdadm.conf
+    mdadm = "HOMEHOST <system>\nMAILADDR root\n"
+    if len(CONFIG["filesystem_devices"]) > 1:
+        boot_raid_uuid = subprocess.check_output(["blkid", "/dev/disk/by-id/" + CONFIG["filesystem_devices"][0] + "-part3", "-o", "value", "-s", "UUID"]).decode().strip()
+        mdadm += f"ARRAY /dev/md0 UUID={boot_raid_uuid.replace('-',':')}\n"
+        if CONFIG["filesystem_type"] != "zfs":
+            root_raid_uuid = subprocess.check_output(["blkid", "/dev/disk/by-id/" + CONFIG["filesystem_devices"][0] + "-part4", "-o", "value", "-s", "UUID"]).decode().strip()
+            mdadm += f"ARRAY /dev/md1 UUID={root_raid_uuid.replace('-',':')}\n"
+    open("/mnt/etc/mdadm/mdadm.conf", "w").write(mdadm)
+
+    # update initramfs
+    kernel_version = os.path.basename(glob.glob("/mnt/lib/modules/*")[0])
+    subprocess.call(["chroot", "/mnt", "update-initramfs", "-u", "-k", kernel_version])
+
+    # configure and install grub
+    if not os.path.exists("/mnt/boot/efi"):
+        os.mkdir("/mnt/boot/efi")
+    subprocess.call(["chroot", "/mnt", "update-grub"])
+    for disk in CONFIG["filesystem_devices"]:
+        path = "/dev/disk/by-id/" + disk + "-part2"
+        subprocess.call(["mount", path, "/mnt/boot/efi"])
+        subprocess.call(["chroot", "/mnt", "grub-install", "--removable"])
+        subprocess.call(["umount", "/mnt/boot/efi"])
+
+    # update motd and issue
+    open("/mnt/etc/motd", "w").write("")
+    open("/mnt/etc/issue", "w").write(open("/etc/issue").read().splitlines()[0] + "\n\n")
+
+    # TODO: grub + efi update after kernel updates
+    # TODO: network in initramfs
 
 if __name__ == '__main__':
     main()
