@@ -1,9 +1,5 @@
 # Important
 
-## fix efi install from non-efi install
-
-EFI partition currently is empty when being installed on non-efi system..
-
 ## check identity files
 
 Make sure that no identifying files get left after installation.

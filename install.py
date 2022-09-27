@@ -777,7 +777,7 @@ def install_debian():
         path = "/dev/disk/by-id/" + disk + "-part2"
         subprocess.call(["mount", path, "/mnt/boot/efi"])
         subprocess.call(["chroot", "/mnt", "grub-install", "--target=i386-pc", "/dev/disk/by-id/" + disk])
-        subprocess.call(["chroot", "/mnt", "grub-install", "--removable"])
+        subprocess.call(["chroot", "/mnt", "grub-install", "--target=x86_64-efi", "--removable"])
         subprocess.call(["umount", "/mnt/boot/efi"])
 
     # update motd and issue
