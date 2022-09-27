@@ -5,6 +5,12 @@ stages:
 
 build:
   stage: build
+  only:
+    changes:
+      - build.sh
+      - Dockerfile
+      - install.py
+      - files/**/*
   artifacts:
     paths:
       - debian-custom.iso
