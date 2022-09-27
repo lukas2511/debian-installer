@@ -15,10 +15,10 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: Install dependencies
-        run: apt-get -qqy install debootstrap squashfs-tools xorriso isolinux syslinux-efi grub-pc-bin grub-efi-amd64-bin mtools dosfstools
+        run: sudo apt-get -qqy install debootstrap squashfs-tools xorriso isolinux syslinux-efi grub-pc-bin grub-efi-amd64-bin mtools dosfstools
 
       - name: Run build script
-        run: ./build.sh
+        run: sudo ./build.sh
 
       - name: Upload ISO
         uses: actions/upload-artifact@v3.1.0
