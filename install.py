@@ -738,7 +738,7 @@ def install_debian():
             root_part = "UUID=" + subprocess.check_output(["blkid", "/dev/md1", "-o", "value", "-s", "UUID"]).decode().strip()
         else:
             root_part = "UUID=" + subprocess.check_output(["blkid", "/dev/disk/by-id/" + CONFIG["filesystem_devices"][0] + "-part4", "-o", "value", "-s", "UUID"]).decode().strip()
-        fstab += f"UUID={root_part} / {fs} {fsoptions} 0 0\n"
+        fstab += f"{root_part} / {fs} {fsoptions} 0 0\n"
     open("/mnt/etc/fstab", "w").write(fstab)
 
     # /etc/mdadm/mdadm.conf
