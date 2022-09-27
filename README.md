@@ -6,6 +6,9 @@ configuration capabilities.
 Mainly written for my personal use, but I don't see any reason not to
 make it public.
 
+The installer shows a wizard on tty1 on start but also allows for automatic
+installations (see infos below).
+
 **Warning**: There is basically no input validation.  
 Your entries might get written to config files or used in shell commands without any sanity check.
 
