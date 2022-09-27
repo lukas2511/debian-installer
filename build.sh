@@ -53,7 +53,7 @@ mkdir -p "${STAGING_DIR}"
 cp -R files/staging/* "${STAGING_DIR}/"
 cp install.py "${CHROOT_DIR}/root/install.py"
 chmod a+x "${CHROOT_DIR}/root/install.py"
-mksquashfs "${CHROOT_DIR}" "${STAGING_DIR}/live/filesystem.squashfs" -comp xz
+mksquashfs "${CHROOT_DIR}" "${STAGING_DIR}/live/filesystem.squashfs" -b 1048576 -comp xz -Xdict-size 100%
 cp ${CHROOT_DIR}/boot/vmlinuz-* "${STAGING_DIR}/live/vmlinuz"
 cp ${CHROOT_DIR}/boot/initrd.img-* "${STAGING_DIR}/live/initrd"
 
@@ -82,7 +82,7 @@ grub-mkstandalone -O x86_64-efi \
     "boot/grub/grub.cfg=${BUILD_DIR}/tmp/grub-embed.cfg"
 
 (cd "${STAGING_DIR}" && \
-    dd if=/dev/zero of=efiboot.img bs=1M count=20 && \
+    dd if=/dev/zero of=efiboot.img bs=1M count=5 && \
     mkfs.vfat efiboot.img && \
     mmd -i efiboot.img ::/EFI ::/EFI/BOOT && \
     mcopy -vi efiboot.img \
