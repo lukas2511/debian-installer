@@ -7,8 +7,6 @@ on:
       - build.sh
       - .github/workflows/main.yml
       - install.py
-  pull_request:
-    branches: [ "potato" ]
 
 jobs:
   build:
