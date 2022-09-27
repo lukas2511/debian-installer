@@ -1,0 +1,29 @@
+name: Build ISO
+
+on:
+  push:
+    paths:
+      - files/**
+      - build.sh
+      - .github/workflows/main.yml
+      - install.py
+  pull_request:
+    branches: [ "potato" ]
+
+jobs:
+  build:
+    runs-on: debian-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: apt-get -qqy install debootstrap squashfs-tools xorriso isolinux syslinux-efi grub-pc-bin grub-efi-amd64-bin mtools dosfstools
+
+      - name: Run build script
+        run: ./build.sh
+
+      - name: Upload ISO
+        uses: actions/upload-artifact@v3.1.0
+        with:
+          name: ISO
+          path: debian-custom.iso
