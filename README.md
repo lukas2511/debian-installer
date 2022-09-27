@@ -9,10 +9,23 @@ make it public.
 The installer shows a wizard on tty1 on start but also allows for automatic
 installations (see infos below).
 
-**Warning**: There is basically no input validation.  
+[Download ISO](https://git.fslab.de/lschau2s/debian-zfs-installer/-/jobs/artifacts/potato/raw/debian-custom.iso?job=build) (Built directly from potato branch)
+
+# Warning
+
+**There is basically no input validation.**
+
 Your entries might get written to config files or used in shell commands without any sanity check.
 
-[Download ISO](https://git.fslab.de/lschau2s/debian-zfs-installer/-/jobs/artifacts/potato/raw/debian-custom.iso?job=build) (Built directly from potato branch)
+# Boot environment
+
+The ISO boots on both BIOS and UEFI systems and the installed system will behave the same.
+
+In raid configurations the boot partition will be mirrored accross all disks while the
+bios- and efi-boot partitions are kept separately for each disk.  
+
+Keeping those partitions separately allows for clean compatibility with weird UEFI implementations
+that write to the efi disk on boot (I think Dell does this? probably others as well).
 
 # Supported Filesystems
 
