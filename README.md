@@ -32,3 +32,111 @@ For ZFS it's also possible to select native encryption instead.
 
 During gateway configuration the gateway does not have to be in the same subnet as the configured IP.  
 ifupdown2 handles this perfectly well, allowing for e.g. routes through link-local addresses.
+
+# Automatic installation
+
+The installer checks for a partition labeled `INSTALL_CFG`, looking for three
+specific files (all of them optional):
+
+- `prepare.sh`: Runs first. Allows to e.g. acquire and configure a list of disks to install to
+- `config.json`: Will be simply copied to `/tmp/config.json` (which the installer reads from)
+- `install.py`: Updated version of the install script. Replaces the original installer completely, allowing to repurpose the live system for other use cases.
+
+The partition gets mounted and unmounted before running the installer script,  
+that should allow the dual-use of the new system disk as temporary config device.
+
+For installations of servers etc you could use a second USB stick with the configuration on it.
+
+# config.json
+
+## Installer settings
+
+```
+{
+    # remove unnecessary packages after installation (e.g. cryptsetup packages on an unencrypted setup)
+    "purge_unnecessary": true,
+    # do not ask questions for already configured settings (usefull for automatic installation)
+    "skip_configured": true,
+    # don't ask for confirmation, automatically starts installation of all settings have been configured
+    "automatic_install": true,
+    # shutdown after installation
+    "shutdown": false,
+}
+```
+
+## Basic information
+
+```
+{
+    # fully qualified domain name (combined host + domain) of system
+    "fqdn": "debian.lan",
+    # timezone
+    "timezone": "Europe/Berlin",
+}
+```
+
+# Filesystem configuration
+
+```
+{
+    # filesystem type (zfs/ext4/ext4lvm/xfs/xfslvm)
+    "filesystem_type": "zfs",
+    # list of devices as seen in /dev/disk/by-id
+    "filesystem_devices": [
+        "ata-QEMU_HARDDISK_QM00001",
+        "ata-QEMU_HARDDISK_QM00002"
+    ],
+    # encryption passphrase (leave empty to disable encryption)
+    "filesystem_encpasswd": "test1234",
+    # raid level (number as string again.. i know.. it's weird..)
+    # zfs: 0: striped, 1: mirror, 5: raidz, 6: raidz2, 7: raidz3
+    # other: 0: striped, 1: mirror, 5: raid5, 6: raid6, 7: not defined
+    "filesystem_raidlevel": "1",
+    # zfs-only: use zfs native encryption instead of luks
+    "filesystem_enczfsnative": true
+}
+```
+
+## Network configuration
+```
+{
+    # list of network interfaces (selecting multiple requires the definition of a bond type)
+    "network_interfaces": ["ens3"],
+    # bond type/mode (number, but as string.. because of reasons.)
+    # {"0": "balance-rr", "1": "active-backup", "2": "balance-xor", "3": "broadcast", "4": "802.3ad", "5": "balance-tlb", "6": "balance-alb"}
+    "network_bond_type": null,
+    # define name of network bridge (or leave empty if you don't want to create one)
+    "network_bridge": "",
+    # tagged vlan id (leave empty for untagged operation)
+    "network_vlan": "",
+    # IPv6 address including Subnet in slash notation (leave empty for automatic slaac configuration, disabling IPv6 is not an option)
+    "network_ip6": "",
+    # IPv6 gateway (leave empty for automatic configuration)
+    "network_gw6": "",
+    # IPv4 address (leave empty for dhcp, or set to "disable" to not configure IPv4)
+    "network_ip4": "10.0.2.15/24",
+    # IPv4 gateway (required if static ipv4 address is set, otherwise will use DHCP as well)
+    "network_gw4": "10.0.2.2",
+    # list of dns servers (default set: cloudflare)
+    "network_dns": [
+        "2606:4700:4700::1111",
+        "2606:4700:4700::1001",
+        "1.1.1.1",
+        "1.0.0.1"
+    ],
+}
+```
+
+## User configuration
+
+```
+{
+    # root info
+    "root_password": "test1234",
+    "root_pubkey": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIH7W3NIGeEGRHu63+dP7s6M5/s0uHODI4QV2Y1yOzDEq lukas2511",
+    # user info (leave name empty to disable creation of an unprivileged user)
+    "user_name": "",
+    "user_password": "test1234",
+    "user_pubkey": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIH7W3NIGeEGRHu63+dP7s6M5/s0uHODI4QV2Y1yOzDEq lukas2511",
+}
+```
