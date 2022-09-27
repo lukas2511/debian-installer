@@ -49,6 +49,20 @@ For ZFS it's also possible to select native encryption instead.
 During gateway configuration the gateway does not have to be in the same subnet as the configured IP.  
 ifupdown2 handles this perfectly well, allowing for e.g. routes through link-local addresses.
 
+# How it works
+
+The installer first asks for some installation details, e.g. filesystem and raid options.
+
+After confirming the details the installer starts to partition the selected disks, sets
+up raids, creates filesystems, etc. It prepares all mounts in `/mnt`.
+
+For the actual installation the installer script simply uses rsync to copy the rootfs of
+the running live ISO to the new rootfs. It procedes to deinstall some packages inside the
+new rootfs (e.g. the live-boot functions).
+
+Finally some configurations are updated, initramfs gets regenerated and grub gets configured
+and installed.
+
 # Automatic installation
 
 The installer checks for a partition labeled `INSTALL_CFG`, looking for three
