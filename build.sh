@@ -19,8 +19,7 @@ PACKAGES="${PACKAGES} ipmitool"
 PACKAGES="${PACKAGES} python3-netifaces python3-dialog"
 PACKAGES="${PACKAGES} grub-efi grub-pc-bin rsync"
 PACKAGES="${PACKAGES} ca-certificates"
-
-BACKPORTS="zfs-dkms zfs-initramfs zfsutils-linux"
+PACKAGES="${PACKAGES} zfs-dkms zfs-initramfs zfsutils-linux"
 
 debootstrap --arch=amd64 --variant=minbase bullseye "${CHROOT_DIR}" http://deb.debian.org/debian/
 cp -R files/rootfs/* "${CHROOT_DIR}/"
@@ -28,7 +27,6 @@ cp -R files/rootfs/* "${CHROOT_DIR}/"
 chroot "${CHROOT_DIR}" apt-get -qq update
 chroot "${CHROOT_DIR}" env DEBIAN_FRONTEND=noninteractive apt-get -qqy dist-upgrade
 chroot "${CHROOT_DIR}" env DEBIAN_FRONTEND=noninteractive apt-get -qqy install --no-install-recommends ${PACKAGES}
-chroot "${CHROOT_DIR}" env DEBIAN_FRONTEND=noninteractive apt-get -qqy install -t bullseye-backports --no-install-recommends ${BACKPORTS}
 chroot "${CHROOT_DIR}" dkms install "$(basename ${CHROOT_DIR}/usr/src/zfs-* | tr '-' '/')" -k "$(basename ${CHROOT_DIR}/lib/modules/*)"
 
 mkdir "${CHROOT_DIR}/etc/systemd/system/getty@tty1.service.d"
