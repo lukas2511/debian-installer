@@ -20,6 +20,7 @@ PACKAGES="${PACKAGES} python3-netifaces python3-dialog"
 PACKAGES="${PACKAGES} grub-efi grub-pc-bin rsync"
 PACKAGES="${PACKAGES} ca-certificates"
 PACKAGES="${PACKAGES} zfs-dkms zfs-initramfs zfsutils-linux"
+PACKAGES="${PACKAGES} nvme-cli smartmontools pciutils usbutils"
 
 debootstrap --arch=amd64 --variant=minbase bullseye "${CHROOT_DIR}" http://deb.debian.org/debian/
 cp -R files/rootfs/* "${CHROOT_DIR}/"
