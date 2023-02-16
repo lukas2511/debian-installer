@@ -358,7 +358,7 @@ def main():
     readme += "# Dropbear in initramfs\n"
     readme += "For encrypted systems with enabled dropbear support the installer creates initramfs scripts\n"
     readme += "for network configuration.\n"
-    readme += "These scripts are located in `/etc/initramfs-tools/scripts/local-{top,bottom}/network` and\n"
+    readme += "These scripts are located in `/etc/initramfs-tools/scripts/init-{top,bottom}/network` and\n"
     readme += "will need to be updated if your network configuration changes.\n"
     readme += "\n"
     readme += "# Configuration overview\n"
@@ -671,13 +671,12 @@ def install_debian():
         bond_options.append("bond-miimon 100")
         interfaces += f"auto {mgmt_if}\n"
         initram_up.append(f"ip link add {initram_mgmt_if} type bond")
-        initram_up.append(f"ip link set {initram_mgmt_if} type bond miimon 100 mode {BOND_MODES[CONFIG['network_bond_type']]}")
+        initram_up.append(f"echo 100 > /sys/class/net/{initram_mgmt_if}/bonding/miimon")
+        initram_up.append(f"echo {BOND_MODES[CONFIG['network_bond_type']]} > /sys/class/net/{initram_mgmt_if}/bonding/mode")
         initram_down.append(f"ip link del dev {initram_mgmt_if}")
         for iface in CONFIG["network_interfaces"]:
-            initram_up.append(f"ip link set {iface} down")
-            initram_up.append(f"ip link set {iface} master {initram_mgmt_if}")
-            initram_up.append(f"ip link set {iface} up")
-    initram_up.append(f"sysctl -w net.ipv6.conf.{initram_mgmt_if}.accept_ra=0 > /dev/null")
+            initram_up.append(f"if [ -e /sys/class/net/{iface} ]; then ip link set {iface} down; ip link set {iface} master {initram_mgmt_if}; ip link set {iface} up; fi")
+    initram_up.append(f"echo 0 > /proc/sys/net/ipv6/conf/{initram_mgmt_if}/accept_ra")
     initram_up.append(f"ip link set {initram_mgmt_if} up")
     initram_down.append(f"ip link set {initram_mgmt_if} down")
 
@@ -696,7 +695,7 @@ def install_debian():
     if CONFIG["network_vlan"]:
         initram_up.append(f"ip link add link {initram_mgmt_if} name {initram_mgmt_if}.{vlan_id} type vlan id {vlan_id}")
         initram_down.append(f"ip link del dev {initram_mgmt_if}.{vlan_id}")
-        initram_up.append(f"sysctl -w net.ipv6.conf.{initram_mgmt_if}/{vlan_id}.accept_ra=0 > /dev/null")
+        initram_up.append(f"echo 0 > /proc/sys/net/ipv6/conf/{initram_mgmt_if}.{vlan_id}/accept_ra")
         initram_up.append(f"ip link set {initram_mgmt_if}.{vlan_id} up")
         initram_down.append(f"ip link set {initram_mgmt_if}.{vlan_id} down")
 
@@ -753,22 +752,22 @@ def install_debian():
     open("/mnt/etc/network/interfaces", "w").write(interfaces)
 
     if CONFIG["dropbear"]:
-        initramscript = '#!/bin/sh\nif [ "${1}" = "prereqs" ]; then exit 0; fi\nexport PATH=/bin:/sbin:/usr/bin:/usr/sbin\necho Waiting 5 seconds before network configuration\nsleep 5\n'
+        initramscript = '#!/bin/sh\nif [ "${1}" = "prereqs" ]; then echo udev; exit 0; fi\nexport PATH=/bin:/sbin:/usr/bin:/usr/sbin\necho Waiting 5 seconds before network configuration\nsleep 5\n'
         for cmd in initram_up:
             initramscript += cmd + "\n"
-        initramscript += "sleep 2\nip a\n"
-        print(initramscript)
-        open("/mnt/etc/initramfs-tools/scripts/local-top/network", "w").write(initramscript)
-        os.chmod("/mnt/etc/initramfs-tools/scripts/local-top/network", 0o755)
+        initramscript += f"sleep 2\nip a\ntouch /run/net-{initram_mgmt_if}.conf\n"
+        open("/mnt/etc/initramfs-tools/scripts/init-top/network", "w").write(initramscript)
+        os.chmod("/mnt/etc/initramfs-tools/scripts/init-top/network", 0o755)
 
-        open("/mnt/etc/initramfs-tools/conf.d/network.conf", "w").write("IP=off\n")
+        open("/mnt/etc/initramfs-tools/conf.d/network.conf", "w").write(f"DEVICE={initram_mgmt_if}\n")
         open("/mnt/etc/initramfs-tools/modules", "a").write("8021q\nbonding\n")
 
-        initramscript_down = '#!/bin/sh\nif [ "${1}" = "prereqs" ]; then exit 0; fi\nexport PATH=/bin:/sbin:/usr/bin:/usr/sbin\necho Clearing network configuration\n'
+        initramscript_down = '#!/bin/sh\nif [ "${1}" = "prereqs" ]; then exit 0; fi\nexport PATH=/bin:/sbin:/usr/bin:/usr/sbin\necho Clearing network configuration...\n'
         for cmd in initram_down[::-1]:
             initramscript_down += cmd + "\n"
-        open("/mnt/etc/initramfs-tools/scripts/local-bottom/network", "w").write(initramscript_down)
-        os.chmod("/mnt/etc/initramfs-tools/scripts/local-bottom/network", 0o755)
+        initramscript_down += "echo Done.\n"
+        open("/mnt/etc/initramfs-tools/scripts/init-bottom/network", "w").write(initramscript_down)
+        os.chmod("/mnt/etc/initramfs-tools/scripts/init-bottom/network", 0o755)
 
         open("/mnt/etc/dropbear-initramfs/config", "w").write('DROPBEAR_OPTIONS="-p 222"\n')
         open("/mnt/etc/dropbear-initramfs/authorized_keys", "w").write(CONFIG["root_pubkey"])
