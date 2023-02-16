@@ -9,12 +9,12 @@ import shutil
 BASE_CONFIG = {
     'fqdn': 'debian.lan',
     'timezone': 'Europe/Berlin',
-    'network_interfaces': ['ens3'],
-    'network_bond_type': None,
+    'network_interfaces': ['ens3', 'dummy0'],
+    'network_bond_type': "1",
     'network_bridge': 'br0',
-    'network_vlan': '',
-    'network_ip6': '',
-    'network_gw6': '',
+    'network_vlan': '1234',
+    'network_ip6': 'fd00::2/64',
+    'network_gw6': 'fd00::1',
     'network_ip4': '10.0.2.15/24',
     'network_gw4': '10.0.2.2',
     'network_dns': ['2606:4700:4700::1111', '2606:4700:4700::1001', '1.1.1.1', '1.0.0.1'],
@@ -25,6 +25,7 @@ BASE_CONFIG = {
     'skip_configured': True,
     'automatic_install': True,
     'shutdown': True,
+    'dropbear': False,
 }
 
 DISKS = ["ata-QEMU_HARDDISK_QM00001", "ata-QEMU_HARDDISK_QM00002", "ata-QEMU_HARDDISK_QM00003"]
@@ -41,6 +42,7 @@ for filesystem_type in ["zfs", "ext4", "ext4lvm"]:
             CONFIG["filesystem_type"] = filesystem_type
             CONFIG["filesystem_devices"] = DISKS[:num_disks]
             CONFIG["filesystem_encpasswd"] = encpasswd
+            CONFIG["dropbear"] = True
             CONFIG["filesystem_raidlevel"] = '1' if (num_disks > 1) else ''
             CONFIG['filesystem_enczfsnative'] = False
             if filesystem_type == "zfs":
