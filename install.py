@@ -347,6 +347,27 @@ def main():
         prepare_disks()
     install_debian()
 
+    readme = "# General\n"
+    readme += "This OS has been installed from lukas2511 custom debian installer\n"
+    readme += "\n"
+    readme += "# Boot partitions\n"
+    readme += "On systems with multiple disks the EFI and BIOS-Boot partitions are not automatically synced.\n"
+    readme += "An automated script re-installs grub on all those partitions after a kernel or grub update.\n"
+    readme += "In case of disks replacements the partition UUIDs in `/etc/kernel/efi-boot-uuids` might need\n"
+    readme += "to be updated and `/etc/kernel/postinst.d/zz-update-grub-raid` has to be run manually.\n"
+    readme += "\n"
+    readme += "# Dropbear in initramfs\n"
+    readme += "For encrypted systems with enabled dropbear support the installer creates initramfs scripts\n"
+    readme += "for network configuration.\n"
+    readme += "These scripts are located in `/etc/initramfs-tools/scripts/local-{top,bottom}/network` and\n"
+    readme += "will need to be updated if your network configuration changes.\n"
+    readme += "\n"
+    readme += "# Configuration overview\n"
+    readme += "In the following sections you'll find an overview of options given during installation.\n"
+    readme += "\n"
+    readme += overview
+    open("/mnt/root/README.txt", "w").write(overview)
+
 def cleanup_devices():
     # unmount filesystems
     unmount = []
