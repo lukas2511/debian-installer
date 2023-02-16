@@ -345,7 +345,6 @@ def main():
 
     if not os.path.exists("/mnt/etc/os-release"):
         prepare_disks()
-    install_debian()
 
     readme = "# General\n"
     readme += "This OS has been installed from lukas2511 custom debian installer\n"
@@ -366,7 +365,11 @@ def main():
     readme += "In the following sections you'll find an overview of options given during installation.\n"
     readme += "\n"
     readme += overview
-    open("/mnt/root/README.txt", "w").write(overview)
+    if not os.path.exists("/mnt/root"):
+        os.mkdir("/mnt/root")
+    open("/mnt/root/README.txt", "w").write(readme)
+
+    install_debian()
 
 def cleanup_devices():
     # unmount filesystems
