@@ -227,6 +227,10 @@ def get_config():
 
     get_password("filesystem_encpasswd", "Encryption passphrase", "disk encryption\n\nLeave empty to disable.", allow_empty=True)
     overview += "Encryption: %s\n" % ("Enabled" if CONFIG["filesystem_encpasswd"] else "Disabled")
+    if CONFIG["filesystem_encpasswd"]:
+        get_yesno("dropbear", "Dropbear", "Enable dropbear SSH server in initramfs?", True)
+    else:
+        CONFIG["dropbear"] = False
     if CONFIG["filesystem_encpasswd"] and CONFIG["filesystem_type"] == "zfs":
         get_yesno("filesystem_enczfsnative", "ZFS native encryption", "Use ZFS native encryption instead of LUKS?", False)
         overview += "Encryption type: %s\n" % ("ZFS-native" if CONFIG["filesystem_enczfsnative"] else "LUKS")
@@ -516,6 +520,8 @@ def install_debian():
     # purge unnecessary packages
     print("# Removing unnecessary packages")
     unneeded_packages = ["live-boot"]
+    if not CONFIG["dropbear"]:
+        unneeded_packages += ["dropbear-initramfs", "dropbear-bin"]
     if CONFIG["purge_unnecessary"]:
         unneeded_packages += ["debootstrap", "python3-netifaces", "python3-dialog"]
         if CONFIG["filesystem_type"] != "zfs":
@@ -621,6 +627,10 @@ def install_debian():
     print("# Generating network configuration")
     interfaces = ""
     bridge_port = None
+
+    initram_up = []
+    initram_down = []
+
     for iface in CONFIG["network_interfaces"]:
         interfaces += f"auto {iface}\n"
     interfaces += "\n"
@@ -628,12 +638,24 @@ def install_debian():
     bond_options = []
     if len(CONFIG["network_interfaces"]) == 1:
         mgmt_if = CONFIG["network_interfaces"][0]
+        initram_mgmt_if = mgmt_if
     else:
         mgmt_if = "bond0"
+        initram_mgmt_if = mgmt_if
         bond_options.append("bond-slaves " + (" ".join(CONFIG["network_interfaces"])))
         bond_options.append("bond-mode " + BOND_MODES[CONFIG["network_bond_type"]])
         bond_options.append("bond-miimon 100")
         interfaces += f"auto {mgmt_if}\n"
+        initram_up.append(f"ip link add {initram_mgmt_if} type bond")
+        initram_up.append(f"ip link set {initram_mgmt_if} type bond miimon 100 mode {BOND_MODES[CONFIG['network_bond_type']]}")
+        initram_down.append(f"ip link del dev {initram_mgmt_if}")
+        for iface in CONFIG["network_interfaces"]:
+            initram_up.append(f"ip link set {iface} down")
+            initram_up.append(f"ip link set {iface} master {initram_mgmt_if}")
+            initram_up.append(f"ip link set {iface} up")
+    initram_up.append(f"sysctl -w net.ipv6.conf.{initram_mgmt_if}.accept_ra=0 > /dev/null")
+    initram_up.append(f"ip link set {initram_mgmt_if} up")
+    initram_down.append(f"ip link set {initram_mgmt_if} down")
 
     if CONFIG["network_bridge"]:
         interfaces += f"iface {mgmt_if} inet manual\n"
@@ -648,6 +670,12 @@ def install_debian():
     vlan_id = CONFIG["network_vlan"]
     vlan_raw_device = None
     if CONFIG["network_vlan"]:
+        initram_up.append(f"ip link add link {initram_mgmt_if} name {initram_mgmt_if}.{vlan_id} type vlan id {vlan_id}")
+        initram_down.append(f"ip link del dev {initram_mgmt_if}.{vlan_id}")
+        initram_up.append(f"sysctl -w net.ipv6.conf.{initram_mgmt_if}/{vlan_id}.accept_ra=0 > /dev/null")
+        initram_up.append(f"ip link set {initram_mgmt_if}.{vlan_id} up")
+        initram_down.append(f"ip link set {initram_mgmt_if}.{vlan_id} down")
+
         vlan_raw_device = mgmt_if
         interfaces += f"iface {mgmt_if} inet manual\n"
         interfaces += f"    up sysctl -w net.ipv6.conf.{mgmt_if}.accept_ra=0\n"
@@ -659,12 +687,17 @@ def install_debian():
             for option in bond_options:
                 interfaces += f"    {option}\n"
         mgmt_if = f"{mgmt_if}.{vlan_id}"
+        initram_mgmt_if = f"{initram_mgmt_if}.{vlan_id}"
         interfaces += "\n"
         interfaces += f"auto {mgmt_if}\n"
 
     if CONFIG["network_ip6"]:
         interfaces += f"iface {mgmt_if} inet6 static\n"
         interfaces += f"    address {CONFIG['network_ip6']}\n"
+        initram_up.append(f"ip -6 addr add {CONFIG['network_ip6']} dev {initram_mgmt_if}")
+        initram_down.append(f"ip -6 addr flush dev {initram_mgmt_if}")
+        initram_up.append(f"ip -6 route add default via {CONFIG['network_gw6']} dev {initram_mgmt_if}")
+        initram_down.append(f"ip -6 route flush dev {initram_mgmt_if}")
         if CONFIG["network_gw6"]:
             interfaces += f"    gateway {CONFIG['network_gw6']}\n"
             interfaces += f"    up sysctl -w net.ipv6.conf.{mgmt_if.replace('.','/')}.accept_ra=0\n"
@@ -683,6 +716,10 @@ def install_debian():
 
     if CONFIG["network_ip4"] != "disable":
         if CONFIG["network_ip4"]:
+            initram_up.append(f"ip addr add {CONFIG['network_ip4']} dev {initram_mgmt_if}")
+            initram_down.append(f"ip addr flush dev {initram_mgmt_if}")
+            initram_up.append(f"ip route add default via {CONFIG['network_gw4']} dev {initram_mgmt_if}")
+            initram_down.append(f"ip route flush dev {initram_mgmt_if}")
             interfaces += f"iface {mgmt_if} inet static\n"
             interfaces += f"    address {CONFIG['network_ip4']}\n"
             interfaces += f"    gateway {CONFIG['network_gw4']}\n"
@@ -690,6 +727,27 @@ def install_debian():
             interfaces += f"iface {mgmt_if} inet dhcp\n"
 
     open("/mnt/etc/network/interfaces", "w").write(interfaces)
+
+    if CONFIG["dropbear"]:
+        initramscript = '#!/bin/sh\nif [ "${1}" = "prereqs" ]; then exit 0; fi\nset -x\nexport PATH=/bin:/sbin:/usr/bin:/usr/sbin\necho Waiting 5 seconds before network configuration\nsleep 5\n'
+        for cmd in initram_up:
+            initramscript += cmd + "\n"
+        initramscript += "sleep 2\nip a\n"
+        print(initramscript)
+        open("/mnt/etc/initramfs-tools/scripts/local-top/network", "w").write(initramscript)
+        os.chmod("/mnt/etc/initramfs-tools/scripts/local-top/network", 0o755)
+
+        open("/mnt/etc/initramfs-tools/conf.d/network.conf", "w").write("IP=off\n")
+        open("/mnt/etc/initramfs-tools/modules", "a").write("8021q\nbonding\n")
+
+        initramscript_down = '#!/bin/sh\nif [ "${1}" = "prereqs" ]; then exit 0; fi\nset -x\nexport PATH=/bin:/sbin:/usr/bin:/usr/sbin\necho Clearing network configuration\n'
+        for cmd in initram_down[::-1]:
+            initramscript_down += cmd + "\n"
+        open("/mnt/etc/initramfs-tools/scripts/local-bottom/network", "w").write(initramscript_down)
+        os.chmod("/mnt/etc/initramfs-tools/scripts/local-bottom/network", 0o755)
+
+        open("/mnt/etc/dropbear-initramfs/config", "w").write('DROPBEAR_OPTIONS="-p 222"\n')
+        open("/mnt/etc/dropbear-initramfs/authorized_keys", "w").write(CONFIG["root_pubkey"])
 
     # /etc/crypttab
     print("# Generating crypttab")
@@ -792,9 +850,6 @@ def install_debian():
     print("# Updating motd + issue")
     open("/mnt/etc/motd", "w").write("")
     open("/mnt/etc/issue", "w").write(open("/etc/issue").read().splitlines()[0] + "\n\n")
-
-    # TODO: grub + efi updates after kernel updates (support for multiple efi partitions)
-    # TODO: dropbear + network in initramfs (maybe..)
 
     print("# Done!")
 
