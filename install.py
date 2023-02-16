@@ -750,7 +750,7 @@ def install_debian():
     open("/mnt/etc/network/interfaces", "w").write(interfaces)
 
     if CONFIG["dropbear"]:
-        initramscript = '#!/bin/sh\nif [ "${1}" = "prereqs" ]; then exit 0; fi\nset -x\nexport PATH=/bin:/sbin:/usr/bin:/usr/sbin\necho Waiting 5 seconds before network configuration\nsleep 5\n'
+        initramscript = '#!/bin/sh\nif [ "${1}" = "prereqs" ]; then exit 0; fi\nexport PATH=/bin:/sbin:/usr/bin:/usr/sbin\necho Waiting 5 seconds before network configuration\nsleep 5\n'
         for cmd in initram_up:
             initramscript += cmd + "\n"
         initramscript += "sleep 2\nip a\n"
@@ -761,7 +761,7 @@ def install_debian():
         open("/mnt/etc/initramfs-tools/conf.d/network.conf", "w").write("IP=off\n")
         open("/mnt/etc/initramfs-tools/modules", "a").write("8021q\nbonding\n")
 
-        initramscript_down = '#!/bin/sh\nif [ "${1}" = "prereqs" ]; then exit 0; fi\nset -x\nexport PATH=/bin:/sbin:/usr/bin:/usr/sbin\necho Clearing network configuration\n'
+        initramscript_down = '#!/bin/sh\nif [ "${1}" = "prereqs" ]; then exit 0; fi\nexport PATH=/bin:/sbin:/usr/bin:/usr/sbin\necho Clearing network configuration\n'
         for cmd in initram_down[::-1]:
             initramscript_down += cmd + "\n"
         open("/mnt/etc/initramfs-tools/scripts/local-bottom/network", "w").write(initramscript_down)
