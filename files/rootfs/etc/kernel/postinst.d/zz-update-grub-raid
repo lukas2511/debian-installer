@@ -1,0 +1,29 @@
+#!/bin/sh
+set -e
+
+if [ ! -f /etc/kernel/efi-boot-uuids ]; then
+	exit 0
+fi
+
+cat /etc/kernel/efi-boot-uuids | while IFS= read -r curr_uuid; do
+	if [ -z "$curr_uuid" ]; then continue; fi
+	if [ ! -e "/dev/disk/by-uuid/${curr_uuid}" ]; then
+		echo "Configured ESP partition with UUID ${curr_uuid} not found!"
+		continue
+	fi
+
+	echo "Updating efi grub on /dev/disk/by-uuid/${curr_uuid}"
+	mount "/dev/disk/by-uuid/${curr_uuid}" "/boot/efi"
+	grub-install --target=x86_64-efi --removable
+	umount /boot/efi
+
+	part="$(realpath "/dev/disk/by-uuid/${curr_uuid}")"
+	for disk in /dev/disk/by-id/*-part?; do
+		if [ "$(realpath "${disk}")" = "${part}" ]; then
+			disk="$(echo "${disk}" | sed -r 's/-part[0-9]+$//')"
+			echo "Updating bios grub on $disk"
+			grub-install --target=i386-pc "${disk}"
+			break
+		fi
+	done
+done

@@ -764,8 +764,10 @@ def install_debian():
     grubdefault += "GRUB_CMDLINE_LINUX_DEFAULT=\"quiet\"\n"
     if CONFIG["filesystem_type"] == "zfs":
         grubdefault += "GRUB_CMDLINE_LINUX=\"root=ZFS=zroot/ROOT/debian boot=zfs audit=0\"\n"
+        open("/mnt/etc/kernel/cmdline", "w").write("root=ZFS=zroot/ROOT/debian boot=zfs audit=0")
     else:
         grubdefault += "GRUB_CMDLINE_LINUX=\"audit=0\"\n"
+        open("/mnt/etc/kernel/cmdline", "w").write("audit=0")
     open("/mnt/etc/default/grub", "w").write(grubdefault)
 
     # configure and install grub
@@ -773,12 +775,18 @@ def install_debian():
     if not os.path.exists("/mnt/boot/efi"):
         os.mkdir("/mnt/boot/efi")
     subprocess.call(["chroot", "/mnt", "update-grub"])
+
+    esp_list = []
     for disk in CONFIG["filesystem_devices"]:
         path = "/dev/disk/by-id/" + disk + "-part2"
+        esp_list.append(subprocess.check_output(["blkid", path, "-o", "value", "-s", "UUID"]).decode())
         subprocess.call(["mount", path, "/mnt/boot/efi"])
         subprocess.call(["chroot", "/mnt", "grub-install", "--target=i386-pc", "/dev/disk/by-id/" + disk])
         subprocess.call(["chroot", "/mnt", "grub-install", "--target=x86_64-efi", "--removable"])
         subprocess.call(["umount", "/mnt/boot/efi"])
+
+    if len(esp_list) > 1:
+        open("/mnt/etc/kernel/efi-boot-uuids", "w").write("\n".join(esp_list))
 
     # update motd and issue
     print("# Updating motd + issue")
