@@ -27,6 +27,9 @@ bios- and efi-boot partitions are kept separately for each disk.
 Keeping those partitions separately allows for clean compatibility with weird UEFI implementations
 that write to the efi disk on boot (I think Dell does this? probably others as well).
 
+A script syncs the current grub installation to all efi and bios-grub partitions after every
+update.
+
 # Supported Filesystems
 
 - ZFS
@@ -35,8 +38,13 @@ that write to the efi disk on boot (I think Dell does this? probably others as w
 
 The installer allows selecting multiple disks to set up a RAID (mdraid for lvm/ext4/xfs, native raid for ZFS)
 
+# Encryption
+
 All filesystems can also be encrypted using LUKS disk encryption.  
 For ZFS it's also possible to select native encryption instead.
+
+Dropbear can be configured for use in initramfs. A script will be generated setting
+up the network as defined during the installation (including network bonding and vlans).
 
 # Networking features
 
@@ -123,7 +131,9 @@ For installations of servers etc you could use a second USB stick with the confi
     # other: 0: striped, 1: mirror, 5: raid5, 6: raid6, 7: not defined
     "filesystem_raidlevel": "1",
     # zfs-only: use zfs native encryption instead of luks
-    "filesystem_enczfsnative": true
+    "filesystem_enczfsnative": true,
+    # enable dropbear in initramfs
+    "dropbear": false,
 }
 ```
 
