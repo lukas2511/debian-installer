@@ -719,6 +719,8 @@ def install_debian():
         interfaces += f"    address {CONFIG['network_ip6']}\n"
         initram_up.append(f"ip -6 addr add {CONFIG['network_ip6']} dev {initram_mgmt_if}")
         initram_down.append(f"ip -6 addr flush dev {initram_mgmt_if}")
+        if not CONFIG['network_gw6'].startswith("fe80:"):
+            initram_up.append(f"ip -6 route add {CONFIG['network_gw6']}/128 dev {initram_mgmt_if}")
         initram_up.append(f"ip -6 route add default via {CONFIG['network_gw6']} dev {initram_mgmt_if}")
         initram_down.append(f"ip -6 route flush dev {initram_mgmt_if}")
         if CONFIG["network_gw6"]:
@@ -741,6 +743,7 @@ def install_debian():
         if CONFIG["network_ip4"]:
             initram_up.append(f"ip addr add {CONFIG['network_ip4']} dev {initram_mgmt_if}")
             initram_down.append(f"ip addr flush dev {initram_mgmt_if}")
+            initram_up.append(f"ip route add {CONFIG['network_gw4']}/32 dev {initram_mgmt_if}")
             initram_up.append(f"ip route add default via {CONFIG['network_gw4']} dev {initram_mgmt_if}")
             initram_down.append(f"ip route flush dev {initram_mgmt_if}")
             interfaces += f"iface {mgmt_if} inet static\n"
