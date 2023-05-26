@@ -25,6 +25,8 @@ PACKAGES="${PACKAGES} ca-certificates"
 PACKAGES="${PACKAGES} zfs-dkms zfs-initramfs zfsutils-linux"
 PACKAGES="${PACKAGES} nvme-cli smartmontools pciutils usbutils"
 
+ulimit -n 1024
+
 debootstrap --arch=amd64 --variant=minbase bookworm "${CHROOT_DIR}" http://deb.debian.org/debian/
 cp -R files/rootfs/* "${CHROOT_DIR}/"
 
