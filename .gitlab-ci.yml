@@ -18,6 +18,3 @@ build:
     expose_as: 'Live ISO'
   script:
     - ./build.sh
-  environment:
-    name: ISO from build job ${CI_JOB_ID}
-    url: ${CI_JOB_URL}/artifacts/file/debian-custom.iso
