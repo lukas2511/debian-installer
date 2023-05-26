@@ -25,7 +25,7 @@ PACKAGES="${PACKAGES} ca-certificates"
 PACKAGES="${PACKAGES} zfs-dkms zfs-initramfs zfsutils-linux"
 PACKAGES="${PACKAGES} nvme-cli smartmontools pciutils usbutils"
 
-debootstrap --arch=amd64 --variant=minbase bullseye "${CHROOT_DIR}" http://deb.debian.org/debian/
+debootstrap --arch=amd64 --variant=minbase bookworm "${CHROOT_DIR}" http://deb.debian.org/debian/
 cp -R files/rootfs/* "${CHROOT_DIR}/"
 
 chroot "${CHROOT_DIR}" apt-get -qq update

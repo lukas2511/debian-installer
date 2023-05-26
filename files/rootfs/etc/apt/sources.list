@@ -1,8 +1,8 @@
-deb http://deb.debian.org/debian bullseye main contrib
+deb http://deb.debian.org/debian bookworm main contrib
 
-deb http://deb.debian.org/debian bullseye-updates main contrib
+deb http://deb.debian.org/debian bookworm-updates main contrib
 
-deb http://deb.debian.org/debian bullseye-backports main contrib
+deb http://deb.debian.org/debian bookworm-backports main contrib
 
 # security updates
-deb http://security.debian.org bullseye-security main contrib
+deb http://security.debian.org bookworm-security main contrib
