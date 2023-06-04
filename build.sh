@@ -4,6 +4,8 @@ BUILD_DIR="/tmp/build"
 CHROOT_DIR="${BUILD_DIR}/chroot"
 STAGING_DIR="${BUILD_DIR}/staging"
 
+BUNDLE_FIRMWARE="${BUNDLE_FIRMWARE:-n}"
+
 PACKAGES="linux-image-amd64 linux-headers-amd64"
 PACKAGES="${PACKAGES} dbus systemd-sysv live-boot xz-utils"
 PACKAGES="${PACKAGES} locales console-setup"
@@ -25,10 +27,18 @@ PACKAGES="${PACKAGES} ca-certificates"
 PACKAGES="${PACKAGES} zfs-dkms zfs-initramfs zfsutils-linux"
 PACKAGES="${PACKAGES} nvme-cli smartmontools pciutils usbutils"
 
+if [ "${BUNDLE_FIRMWARE}" = "y" ]; then
+  PACKAGES="${PACKAGES} firmware-bnx2 firmware-bnx2x firmware-realtek firmware-linux"
+fi
+
 ulimit -n 1024
 
 debootstrap --arch=amd64 --variant=minbase bookworm "${CHROOT_DIR}" http://deb.debian.org/debian/
 cp -R files/rootfs/* "${CHROOT_DIR}/"
+
+if [ "${BUNDLE_FIRMWARE}" = "y" ]; then
+  sed -i 's/contrib$/contrib non-free-firmware/g' "${CHROOT_DIR}/etc/apt/sources.list"
+fi
 
 chroot "${CHROOT_DIR}" apt-get -qq update
 chroot "${CHROOT_DIR}" env DEBIAN_FRONTEND=noninteractive apt-get -qqy dist-upgrade
