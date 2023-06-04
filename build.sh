@@ -62,6 +62,7 @@ rm -rf "${CHROOT_DIR}/var/lib/apt/lists" "${CHROOT_DIR}/var/cache/apt/"*
 rm -rf "${CHROOT_DIR}/dev"/*
 rm -rf "${CHROOT_DIR}/proc"/*
 rm -rf "${CHROOT_DIR}/sys"/*
+rm -f "${CHROOT_DIR}/etc/initramfs-tools/conf.d/compress"
 
 mkdir -p "${STAGING_DIR}"
 cp -R files/staging/* "${STAGING_DIR}/"
