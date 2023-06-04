@@ -7,7 +7,7 @@ STAGING_DIR="${BUILD_DIR}/staging"
 BUNDLE_FIRMWARE="${BUNDLE_FIRMWARE:-n}"
 
 PACKAGES="linux-image-amd64 linux-headers-amd64"
-PACKAGES="${PACKAGES} dbus systemd-sysv live-boot xz-utils"
+PACKAGES="${PACKAGES} dbus systemd-sysv live-boot xz-utils zstd"
 PACKAGES="${PACKAGES} locales console-setup"
 PACKAGES="${PACKAGES} vim git htop tmux zsh curl wget"
 PACKAGES="${PACKAGES} man less"
