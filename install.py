@@ -772,7 +772,7 @@ def install_debian():
         open("/mnt/etc/initramfs-tools/scripts/init-bottom/network", "w").write(initramscript_down)
         os.chmod("/mnt/etc/initramfs-tools/scripts/init-bottom/network", 0o755)
 
-        open("/mnt/etc/dropbear/initramfs/config", "w").write('DROPBEAR_OPTIONS="-p 222"\n')
+        open("/mnt/etc/dropbear/initramfs/dropbear.conf", "w").write('DROPBEAR_OPTIONS="-p 222"\n')
         open("/mnt/etc/dropbear/initramfs/authorized_keys", "w").write(CONFIG["root_pubkey"])
 
         for path in glob.glob("/mnt/etc/dropbear/initramfs/dropbear_*_host_key"):
